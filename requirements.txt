@@ -1,7 +1,7 @@
 docker
 sarge
 python-box
-botleague-helpers
+botleague-helpers>=0.0.6
 google-cloud-storage>=1.15.0
 google-auth>=1.6.3
 google-cloud-logging
