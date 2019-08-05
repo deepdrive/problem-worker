@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from random import random
 
 import requests
 import docker
@@ -9,6 +10,7 @@ from loguru import logger as log
 
 from botleague_helpers.config import in_test
 
+from auto_update import pull_latest, AutoUpdater
 from common import is_json, get_eval_jobs_kv_store, fetch_instance_id
 from constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
@@ -25,11 +27,15 @@ class EvalWorker:
         self.instance_id, self.is_on_gcp = fetch_instance_id()
         self.docker = docker.from_env()
         self.db = get_eval_jobs_kv_store()
+        self.auto_updater = AutoUpdater()
+        add_stackdriver_sink(log, self.instance_id)
 
     def loop(self, max_iters=None):
-
         iters = 0
         while True:
+            if self.auto_updater.auto_update():
+                # We will be auto restarted by supervisord with new code
+                return
             job = self.check_for_jobs()
             if job:
                 if job.status == JOB_STATUS_TO_START:
@@ -44,14 +50,12 @@ class EvalWorker:
             #  disk space. Shouldn't matter until more problems and providers
             #  are added.
             iters += 1
-            if iters >= max_iters:
+            if max_iters is not None and iters >= max_iters:
                 # Used for testing
                 return job
 
-
-            # TODO: Check git every 3 minutes, pull and end process if changes
-            #  We will be autorestarted by supervisord with new code
-            time.sleep(1)
+            # Sleep with random splay to avoid thundering herd
+            time.sleep(0.5 + random())
 
     def check_for_jobs(self) -> Box:
         job_query = self.db.collection.where(
@@ -152,6 +156,11 @@ class EvalWorker:
         return url
 
 
+def main():
+    worker = EvalWorker()
+    worker.loop()
+
+
 def play():
     add_stackdriver_sink(log, instance_id='asdf')
     log.error('asdfasdf')
@@ -178,6 +187,6 @@ def play():
 
 
 if __name__ == '__main__':
-    play()
-    # main()
+    # play()
+    main()
 
