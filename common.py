@@ -26,7 +26,7 @@ def get_eval_jobs_kv_store():
 
 
 def fetch_instance_id() -> Tuple[str, bool]:
-    if in_test():
+    if in_test() or 'FAKE_INSTANCE_ID' in os.environ:
         ret = os.environ['FAKE_INSTANCE_ID']
         is_real = False
     else:
