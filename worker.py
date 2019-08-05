@@ -7,13 +7,12 @@ import docker
 from box import Box
 from loguru import logger as log
 
-from botleague_helpers.config import blconfig, in_test
-from botleague_helpers.key_value_store import get_key_value_store
+from botleague_helpers.config import in_test
 
+from common import is_json, get_eval_jobs_kv_store, fetch_instance_id
 from constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
-    BOTLEAGUE_LOG_DIR, EVAL_JOBS_COLLECTION_NAME, JOB_STATUS_TO_START, \
-    METADATA_URL
+    BOTLEAGUE_LOG_DIR, JOB_STATUS_TO_START
 from logs import add_stackdriver_sink
 
 container_run_level = log.level("CONTAINER", no=20, color="<magenta>")
@@ -23,7 +22,7 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 
 class EvalWorker:
     def __init__(self):
-        self.instance_id = fetch_instance_id()
+        self.instance_id, self.is_on_gcp = fetch_instance_id()
         self.docker = docker.from_env()
         self.db = get_eval_jobs_kv_store()
 
@@ -48,6 +47,10 @@ class EvalWorker:
             if iters >= max_iters:
                 # Used for testing
                 return job
+
+
+            # TODO: Check git every 3 minutes, pull and end process if changes
+            #  We will be autorestarted by supervisord with new code
             time.sleep(1)
 
     def check_for_jobs(self) -> Box:
@@ -104,7 +107,6 @@ class EvalWorker:
             results['error'] = \
                 f'Container failed with exit code {exit_code}'
         job.results = results
-
         self.send_results(job)
 
     @staticmethod
@@ -150,22 +152,6 @@ class EvalWorker:
         return url
 
 
-def is_json(string: str):
-    try:
-        json.loads(string)
-    except ValueError:
-        return False
-    return True
-
-
-def get_eval_jobs_kv_store():
-    return get_key_value_store(
-        EVAL_JOBS_COLLECTION_NAME,
-        use_boxes=True,
-        force_firestore_db=should_force_firestore_db()
-    )
-
-
 def play():
     add_stackdriver_sink(log, instance_id='asdf')
     log.error('asdfasdf')
@@ -189,19 +175,6 @@ def play():
     # log.info(container2.logs())
 
     pass
-
-
-def should_force_firestore_db():
-    return os.environ.get('FORCE_FIRESTORE_DB', None) is not None
-
-
-def fetch_instance_id():
-    if in_test():
-        ret = os.environ['FAKE_INSTANCE_ID']
-    else:
-        ret = requests.get(f'{METADATA_URL}/id',
-                           headers={'Metadata-Flavor': 'Google'})
-    return ret
 
 
 if __name__ == '__main__':

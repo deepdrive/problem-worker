@@ -1,7 +1,8 @@
 import os
 
 from constants import JOB_STATUS_TO_START, JOB_STATUS_FINISHED
-from worker import EvalWorker, get_eval_jobs_kv_store
+from worker import EvalWorker
+from common import get_eval_jobs_kv_store
 
 
 def test_eval_worker():
