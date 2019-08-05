@@ -7,3 +7,5 @@ google-auth>=1.6.3
 google-cloud-logging
 loguru
 pytest
+GitPython>=2.1.11
+
