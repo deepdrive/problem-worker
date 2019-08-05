@@ -1,7 +1,6 @@
 import os
 
 import git
-list(repo.references)
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
