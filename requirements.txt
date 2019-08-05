@@ -1,0 +1,9 @@
+docker
+sarge
+python-box
+botleague-helpers
+google-cloud-storage>=1.15.0
+google-auth>=1.6.3
+google-cloud-logging
+loguru
+pytest

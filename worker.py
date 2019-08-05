@@ -1,46 +1,42 @@
 import json
 import os
 import time
-import logging as log
 
 import requests
 import docker
+from box import Box
+from loguru import logger as log
+
 from botleague_helpers.config import blconfig, in_test
 from botleague_helpers.key_value_store import get_key_value_store
-from box import Box
 
 from constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
     BOTLEAGUE_LOG_DIR, EVAL_JOBS_COLLECTION_NAME, JOB_STATUS_TO_START, \
     METADATA_URL
+from logs import add_stackdriver_sink
 
-log.basicConfig(level=log.INFO)
+container_run_level = log.level("CONTAINER", no=20, color="<magenta>")
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 class EvalWorker:
     def __init__(self):
+        self.instance_id = fetch_instance_id()
         self.docker = docker.from_env()
+        self.db = get_eval_jobs_kv_store()
 
     def loop(self, max_iters=None):
-        instance_id = self.get_instance_id()
-        jobs_kv = get_eval_jobs_kv_store()
+
         iters = 0
         while True:
-            job_query = jobs_kv.collection.where(
-                'instance_id', '==', instance_id)
-            jobs = list(job_query.stream())
-            if len(jobs) > 1:
-                raise RuntimeError('Got more than one job for instance')
-            elif not jobs:
-                print('No job for instance in db')
-            else:
-                job = Box(jobs[0].to_dict())
+            job = self.check_for_jobs()
+            if job:
                 if job.status == JOB_STATUS_TO_START:
-                    self.mark_job_running(job, jobs_kv)
+                    self.mark_job_running(job)
                     self.run_job(job)
-                    self.mark_job_finished(job, jobs_kv)
+                    self.mark_job_finished(job)
 
             # TODO: Send heartbeat every minute? We'll be restarted after
             #  and idle timeout, so not that big of a deal.
@@ -50,27 +46,31 @@ class EvalWorker:
             #  are added.
             iters += 1
             if iters >= max_iters:
-                break
+                # Used for testing
+                return job
             time.sleep(1)
 
-    @staticmethod
-    def get_instance_id():
-        if in_test():
-            ret = os.environ.get('FAKE_INSTANCE_ID', '3592331990274327389')
+    def check_for_jobs(self) -> Box:
+        job_query = self.db.collection.where(
+            'instance_id', '==', self.instance_id)
+        jobs = list(job_query.stream())
+        ret = Box()
+        if len(jobs) > 1:
+            # We currently only support one job per instance
+            raise RuntimeError('Got more than one job for instance')
+        elif not jobs:
+            print('No job for instance in db')
         else:
-            ret = requests.get(f'{METADATA_URL}/id',
-                               headers={'Metadata-Flavor': 'Google'})
+            ret = Box(jobs[0].to_dict())
         return ret
 
-    @staticmethod
-    def mark_job_finished(job, jobs_kv):
+    def mark_job_finished(self, job):
         job.status = JOB_STATUS_FINISHED
-        jobs_kv.set(job.id, job)
+        self.db.set(job.id, job)
 
-    @staticmethod
-    def mark_job_running(job, jobs_kv):
+    def mark_job_running(self, job):
         job.status = JOB_STATUS_RUNNING
-        jobs_kv.set(job.id, job)
+        self.db.set(job.id, job)
 
     def run_job(self, job):
         docker_tag = job.eval_spec.docker_tag
@@ -80,9 +80,9 @@ class EvalWorker:
             BOTLEAGUE_SEED=eval_spec.seed,
             BOTLEAUGE_PROBLEM=eval_spec.problem,
             BOTLEAGUE_RESULT_FILEPATH=BOTLEAGUE_RESULTS_FILEPATH,)
-        log.info('pulling docker image %s...', docker_tag)
-        log.info(self.docker.images.pull(docker_tag))
-        log.info('Running container %s...', docker_tag)
+        log.info('Pulling docker image %s...' % docker_tag)
+        self.docker.images.pull(docker_tag)
+        log.info('Running container %s...' % docker_tag)
         results_mount = f'{DIR}/botleague_results/{eval_spec.eval_id}'
         os.makedirs(results_mount, exist_ok=True)
         container = self.run_container(
@@ -91,18 +91,28 @@ class EvalWorker:
             volumes={
                 results_mount: {'bind': BOTLEAGUE_RESULTS_DIR, 'mode': 'rw'}
             })
-        job_name = self.get_job_name(eval_spec)
+        run_logs = container.logs().decode()
+        log.log('CONTAINER', run_logs)
+        log.info('Finished running container %s...' % docker_tag)
         exit_code = container.attrs['State']['ExitCode']
-        log_url = self.upload_logs(container.logs(),
-                                   filename=f'{job_name}.txt')
-        results = dict(logs=log_url)
+        log_url = self.upload_logs(run_logs,
+                                   filename=f'{job.id}.txt')
+        results = Box(logs=log_url)
         if exit_code == 0:
             results.update(self.get_results(results_dir=results_mount))
         else:
             results['error'] = \
                 f'Container failed with exit code {exit_code}'
         job.results = results
-        requests.post(job.results_callback, json=job)
+
+        self.send_results(job)
+
+    @staticmethod
+    def send_results(job):
+        if in_test():
+            return
+        else:
+            requests.post(job.results_callback, json=job.to_dict())
 
     @staticmethod
     def get_results(results_dir) -> dict:
@@ -127,11 +137,6 @@ class EvalWorker:
         return container
 
     @staticmethod
-    def get_job_name(eval_spec):
-        log_name = f'{eval_spec.problem}_{eval_spec.eval_id}'
-        return log_name
-
-    @staticmethod
     def upload_logs(logs, filename):
         # Upload the logs, auth is by virtue of VM access level
 
@@ -141,7 +146,7 @@ class EvalWorker:
         blob = bucket.get_blob(key)
         blob = blob if blob is not None else bucket.blob(key)
         blob.upload_from_string(logs)
-        url = f'https://storage.googleapis.com/{bucket}/{key}'
+        url = f'https://storage.googleapis.com/{BOTLEAGUE_LOG_BUCKET}/{key}'
         return url
 
 
@@ -157,20 +162,22 @@ def get_eval_jobs_kv_store():
     return get_key_value_store(
         EVAL_JOBS_COLLECTION_NAME,
         use_boxes=True,
-        force_firestore_db=True  # TODO: REMOVE THIS
+        force_firestore_db=should_force_firestore_db()
     )
 
 
 def play():
-    worker = EvalWorker()
-    local_results_dir = f'{DIR}/botleague_results'
-    os.makedirs(local_results_dir, exist_ok=True)
-    container = worker.run_container(
-        'python:3.7',
-        cmd='bash -c "echo {} > /mnt/botleague/results.json"',
-        volumes={local_results_dir: {'bind': '/mnt/botleague', 'mode': 'rw'}},)
-    results = open(f'{local_results_dir}/results.json').read()
-    print(results)
+    add_stackdriver_sink(log, instance_id='asdf')
+    log.error('asdfasdf')
+    # worker = EvalWorker()
+    # local_results_dir = f'{DIR}/botleague_results'
+    # os.makedirs(local_results_dir, exist_ok=True)
+    # container = worker.run_container(
+    #     'python:3.7',
+    #     cmd='bash -c "echo {} > /mnt/botleague/results.json"',
+    #     volumes={local_results_dir: {'bind': '/mnt/botleague', 'mode': 'rw'}},)
+    # results = open(f'{local_results_dir}/results.json').read()
+    # print(results)
     # image = worker.docker.images.get(
     #     '14a2caeca3271219d4aca13d0e9daafd4553fe2f990179a66d8932e5afce805f')
     # image.tag('qwer')
@@ -182,6 +189,19 @@ def play():
     # log.info(container2.logs())
 
     pass
+
+
+def should_force_firestore_db():
+    return os.environ.get('FORCE_FIRESTORE_DB', None) is not None
+
+
+def fetch_instance_id():
+    if in_test():
+        ret = os.environ['FAKE_INSTANCE_ID']
+    else:
+        ret = requests.get(f'{METADATA_URL}/id',
+                           headers={'Metadata-Flavor': 'Google'})
+    return ret
 
 
 if __name__ == '__main__':

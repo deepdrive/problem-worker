@@ -24,7 +24,6 @@ JOB_STATUS_TO_START = 'to_start'
 JOB_STATUS_RUNNING = 'running'
 JOB_STATUS_FINISHED = 'finished'
 
-
 RESULTS_CALLBACK = 'https://sim.deepdrive.io/eval_results'
 
 METADATA_URL = 'http://metadata.google.internal/computeMetadata/v1/instance'
