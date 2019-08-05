@@ -9,6 +9,8 @@ Worker is triggered via setting the worker's instance id in a job on Firestore.
 
 ## Server setup
 
+Start the NVIDIA GCP instance described [here](https://github.com/deepdrive/problem-endpoint/blob/6872b8df4a9a545918f5adbbd2be41d4dc6fcc57/create-deepdrive-eval-instance.http)
+
 ```
 gcloud auth configure-docker
 sudo gcloud components install docker-credential-gcr
