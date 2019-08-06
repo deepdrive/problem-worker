@@ -32,7 +32,7 @@ class EvalWorker:
 
     def loop(self, max_iters=None):
         iters = 0
-        log.info('Starting worker')
+        log.info('Worker started, checking for jobs...')
         while True:
             if self.auto_updater.auto_update():
                 # We will be auto restarted by supervisord with new code

@@ -16,12 +16,22 @@ Python 3.7+
 Start the NVIDIA GCP instance described [here](https://github.com/deepdrive/problem-endpoint/blob/6872b8df4a9a545918f5adbbd2be41d4dc6fcc57/create-deepdrive-eval-instance.http)
 
 ```
+# TODO: Remove below
 sudo apt install python3.7
 gcloud auth configure-docker
 sudo gcloud components install docker-credential-gcr
 sudo apt install python3-pip
 sudo apt-get install -y supervisor
 cd /usr/local/src
+
+
 sudo git clone https://github.com/deepdrive/problem-worker
 ./worker.sh
+```
+
+
+```
+# Install docker-compose
+# Pull in worker container
+# please-run docker-compose up -d
 ```
