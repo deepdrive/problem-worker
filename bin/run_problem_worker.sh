@@ -5,7 +5,7 @@ set -u  # Attempt to use undefined variable outputs error message, and forces an
 set -x  # Similar to verbose mode (-v), but expands commands
 set -o pipefail  # Causes a pipeline to return the exit status of the last command in the pipe that returned a non-zero return value.
 
+# For running on cloud VM in docker
 DIR=`dirname "$0"`
-echo ${DIR}
-pip install -r ${DIR}/requirements.txt
-python -u ${DIR}/worker.py
+cd ${DIR}/..
+make run

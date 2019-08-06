@@ -1,8 +1,9 @@
-.PHONY: build push run bash test deploy reboot_vm prepare
+.PHONY: build push run bash test deploy reboot_vm prepare devrun
 
 TAG=deepdriveio/problem-worker
 SSH=gcloud compute ssh nvidia-gpu-cloud-tensorflow-image-1-vm-1
-RUN_ARGS=-v ~/.gcpcreds/:/root/.gcpcreds -v /var/run/docker.sock:/var/run/docker.sock -e INSTANCE_ID=notaninstanceid
+RUN_ARGS=-v ~/.gcpcreds/:/root/.gcpcreds -v /var/run/docker.sock:/var/run/docker.sock
+RUN_ARGS_DEV=$(RUN_ARGS) -e INSTANCE_ID=notaninstanceid
 
 build:
 	docker build -t $(TAG) .
@@ -18,6 +19,9 @@ ssh:
 
 run:
 	docker run $(RUN_ARGS) -it $(TAG)
+
+devrun:
+	docker run $(RUN_ARGS_DEV) -it $(TAG)
 
 bash:
 	docker run $(RUN_ARGS) -it $(TAG) bash

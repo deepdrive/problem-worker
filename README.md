@@ -32,6 +32,21 @@ sudo git clone https://github.com/deepdrive/problem-worker
 
 ```
 # Install docker-compose
+sudo curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Copy creds to /root/.gcpcreds
+mkdir ~/.gcpcreds
+
+# On local machine
+gcloud compute scp ~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json nvidia-gpu-cloud-tensorflow-image-1-vm-2:~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json
+silken-impulse-217423-8fbe5bbb2a10.json
+
+
 # Pull in worker container
-# please-run docker-compose up -d
+docker pull deepdriveio/problem-worker
+sudo apt install ruby
+sudo gem install pleaserun
+sudo pleaserun --install "docker-compose up -d"
+sudo systemctl enable docker-compose_up_-d.service
 ```
