@@ -32,6 +32,7 @@ class EvalWorker:
 
     def loop(self, max_iters=None):
         iters = 0
+        log.info('Starting worker')
         while True:
             if self.auto_updater.auto_update():
                 # We will be auto restarted by supervisord with new code
@@ -66,7 +67,7 @@ class EvalWorker:
             # We currently only support one job per instance
             raise RuntimeError('Got more than one job for instance')
         elif not jobs:
-            print('No job for instance in db')
+            log.debug('No job for instance in db')
         else:
             ret = Box(jobs[0].to_dict())
         return ret

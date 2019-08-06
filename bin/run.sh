@@ -7,5 +7,5 @@ set -o pipefail  # Causes a pipeline to return the exit status of the last comma
 
 DIR=`dirname "$0"`
 echo ${DIR}
-/usr/bin/python3.7 -m pip install -r ${DIR}/requirements.txt
-/usr/bin/python3.7 -u ${DIR}/worker.py
+pip install -r ${DIR}/requirements.txt
+python -u ${DIR}/worker.py

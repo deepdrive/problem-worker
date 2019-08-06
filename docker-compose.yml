@@ -1,0 +1,10 @@
+version: '3'
+services:
+  worker:
+    build: .
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ~/.gcpcreds/:/root/.gcpcreds
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /root/.gcpcreds/VoyageProject-d33af8724280.json
+      INSTANCE_ID: notaninstanceid

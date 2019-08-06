@@ -3,6 +3,8 @@ import os
 from typing import Tuple
 
 import requests
+from loguru import logger as log
+
 from botleague_helpers.config import in_test
 from botleague_helpers.key_value_store import get_key_value_store
 
@@ -26,12 +28,19 @@ def get_eval_jobs_kv_store():
 
 
 def fetch_instance_id() -> Tuple[str, bool]:
-    if in_test() or 'FAKE_INSTANCE_ID' in os.environ:
-        ret = os.environ['FAKE_INSTANCE_ID']
+    if in_test() or 'INSTANCE_ID' in os.environ:
+        ret = os.environ['INSTANCE_ID']
         is_real = False
     else:
-        ret = requests.get(f'{METADATA_URL}/id',
-                           headers={'Metadata-Flavor': 'Google'})
+        try:
+            ret = requests.get(f'{METADATA_URL}/id',
+                               headers={'Metadata-Flavor': 'Google'})
+        except Exception as e:
+            log.error('Unable to get GCP instance metadata. '
+                      'Are you on GCP? If not, you can manually'
+                      ' set the INSTANCE_ID'
+                      ' in your env for testing purposes.')
+            exit(1)
         is_real = True
     return ret, is_real
 

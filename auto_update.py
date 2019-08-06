@@ -11,6 +11,9 @@ class AutoUpdater:
     def __init__(self, is_on_gcp=False):
         self.is_on_gcp = is_on_gcp
         self.last_update_check_time = None
+        if not self.is_on_gcp:
+            log.info('Not pulling latest on non-gcp machines, assuming you are '
+                     'in dev')
 
     def auto_update(self) -> bool:
         """
@@ -18,10 +21,9 @@ class AutoUpdater:
         """
         now = time.time()
         if not self.is_on_gcp:
-            log.info('Not pulling latest on non-gcp machines, assuming you are '
-                     'in dev')
             ret = False
         elif self.last_update_check_time is not None:
+            log.info('Checking for source changes')
             if self.last_update_check_time - now > 180:
                 self.last_update_check_time = now
                 if pull_latest():
