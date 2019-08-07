@@ -6,7 +6,7 @@ Process is self-updating from the production branch on GitHub.
 
 Worker is triggered via setting the worker's instance id in a job on Firestore.
 
-This process runs in a docker container and starts the sim / bot container via mapping the docker socket.
+This process runs in a docker container and starts the sim or bot container via mapping the docker socket.
 
 ## Requires 
 
