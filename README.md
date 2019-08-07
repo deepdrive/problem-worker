@@ -11,6 +11,7 @@ This process runs in a docker container and starts the sim / bot container via m
 ## Requires 
 
 Python 3.7+
+Docker
 
 ## Server setup
 
