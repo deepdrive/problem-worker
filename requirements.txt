@@ -8,4 +8,5 @@ google-cloud-logging
 loguru
 pytest
 GitPython>=2.1.11
+ipython
 

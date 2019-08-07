@@ -34,7 +34,7 @@ def fetch_instance_id() -> Tuple[str, bool]:
     else:
         try:
             ret = requests.get(f'{METADATA_URL}/id',
-                               headers={'Metadata-Flavor': 'Google'})
+                               headers={'Metadata-Flavor': 'Google'}).text
         except Exception as e:
             log.error('Unable to get GCP instance metadata. '
                       'Are you on GCP? If not, you can manually'

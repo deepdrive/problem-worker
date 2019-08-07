@@ -42,9 +42,10 @@ mkdir ~/.gcpcreds
 gcloud compute scp ~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json nvidia-gpu-cloud-tensorflow-image-1-vm-2:~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json
 silken-impulse-217423-8fbe5bbb2a10.json
 
+# On server
+sudo cp -p /home/craig_voyage_auto/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json /root/.gcpcreds
 
-# Pull in worker container
-docker pull deepdriveio/problem-worker
+# Clone this repo to /usr/local/src
 sudo apt install ruby
 sudo gem install pleaserun
 sudo pleaserun --install "docker-compose up -d"
