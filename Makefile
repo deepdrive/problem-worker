@@ -18,7 +18,7 @@ ssh:
 	$(SSH)
 
 run:
-	docker run $(RUN_ARGS) -e LOGURU_LEVEL=INFO $(TAG)
+	docker run $(RUN_ARGS) -e LOGURU_LEVEL=DEBUG $(TAG)
 
 devrun:
 	docker run $(RUN_ARGS_DEV) -it $(TAG)
