@@ -29,8 +29,8 @@ class AutoUpdater:
             else:
                 ret = False
         else:
-            self.last_update_check_time = time.time()
             ret = self.pull_latest(now)
+        self.last_update_check_time = time.time()
         return ret
 
     def pull_latest(self, now):
