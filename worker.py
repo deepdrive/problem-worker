@@ -93,7 +93,7 @@ class EvalWorker:
         log.info('Pulling docker image %s...' % docker_tag)
         self.docker.images.pull(docker_tag)
         log.info('Running container %s...' % docker_tag)
-        results_mount = f'{DIR}/botleague_results/{eval_spec.eval_id}'
+        results_mount = f'/mnt/botleague_results/{eval_spec.eval_id}'
         os.makedirs(results_mount, exist_ok=True)
         container = self.run_container(
             docker_tag,
