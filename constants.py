@@ -17,7 +17,7 @@ EVAL_LOOP_ID = 'deepdrive_eval_loop'
 BOTLEAGUE_LOG_BUCKET = 'deepdriveio'
 
 BOTLEAGUE_LOG_DIR = 'botleague_eval_logs'
-BOTLEAGUE_RESULTS_DIR = '/mnt/botleague'
+BOTLEAGUE_RESULTS_DIR = '/mnt/botleague_results'
 BOTLEAGUE_RESULTS_FILEPATH = f'{BOTLEAGUE_RESULTS_DIR}/results.json'
 
 JOB_STATUS_TO_START = 'to_start'

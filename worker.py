@@ -103,7 +103,7 @@ class EvalWorker:
         log.info('Pulling docker image %s...' % docker_tag)
         self.docker.images.pull(docker_tag)
         log.info('Running container %s...' % docker_tag)
-        results_mount = self.get_results_dir(eval_spec)
+        results_mount = self.get_results_mount(eval_spec)
         container = self.run_container(
             docker_tag,
             env=container_env,
@@ -125,13 +125,14 @@ class EvalWorker:
         self.send_results(job)
 
     @staticmethod
-    def get_results_dir(eval_spec):
+    def get_results_mount(eval_spec):
         if is_docker():
             results_mount_base = '/mnt/botleague_results'
         else:
             results_mount_base = f'{DIR}/botleague_results'
         results_mount = f'{results_mount_base}/{eval_spec.eval_id}'
         os.makedirs(results_mount, exist_ok=True)
+        log.info(f'results mount {results_mount}')
         return results_mount
 
     @staticmethod
