@@ -15,7 +15,7 @@ class AutoUpdater:
             log.info('Not pulling latest on non-gcp machines, assuming you are '
                      'in dev')
 
-    def auto_update(self) -> bool:
+    def check(self) -> bool:
         """
         :return: Whether or not we updated our local repo
         """
@@ -23,8 +23,9 @@ class AutoUpdater:
         if not self.is_on_gcp:
             ret = False
         elif self.last_update_check_time is not None:
-            log.info('Checking for source changes')
+            log.debug('Checking for source changes')
             if self.last_update_check_time - now > 180:
+                log.info('Pulling latest from github')
                 self.last_update_check_time = now
                 if pull_latest():
                     ret = True

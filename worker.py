@@ -10,7 +10,7 @@ from loguru import logger as log
 
 from botleague_helpers.config import in_test
 
-from auto_update import pull_latest, AutoUpdater
+from auto_updater import pull_latest, AutoUpdater
 from common import is_json, get_eval_jobs_kv_store, fetch_instance_id
 from constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
@@ -34,7 +34,7 @@ class EvalWorker:
         iters = 0
         log.info('Worker started, checking for jobs...')
         while True:
-            if self.auto_updater.auto_update():
+            if self.auto_updater.check():
                 # We will be auto restarted by supervisord with new code
                 return
             job = self.check_for_jobs()
