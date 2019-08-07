@@ -30,13 +30,8 @@ sudo cp /home/craig_voyage_auto/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.jso
 cd /usr/local/src
 sudo git clone https://github.com/deepdrive/problem-worker 
 
-# Note that the repo gets auto-updated with pushes to the production branch
-sudo apt install ruby
-sudo gem install pleaserun
-sudo pleaserun --install --overwrite --name problem-worker --platform systemd /usr/local/src/problem-worker/bin/run_problem_worker.sh
-sudo systemctl enable problem-worker
-sudo systemctl start problem-worker
+
 
 # Check the logs
-sudo journalctl -u problem-worker -e -f
+docker logs 
 ```
