@@ -18,7 +18,7 @@ Docker
 
 ## Server setup
 
-Start the NVIDIA GCP instance described [here](https://github.com/deepdrive/problem-endpoint/blob/6872b8df4a9a545918f5adbbd2be41d4dc6fcc57/create-deepdrive-eval-instance.http)
+Start the NVIDIA GCP instance described [here](https://github.com/deepdrive/problem-endpoint/tree/229dec8a12663791c05b772cd65c2c5903c6d9eb/cloud_configs)
 
 ```
 mkdir ~/.gcpcreds
