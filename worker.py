@@ -27,7 +27,7 @@ class EvalWorker:
         self.instance_id, self.is_on_gcp = fetch_instance_id()
         self.docker = docker.from_env()
         self.db = get_eval_jobs_kv_store()
-        self.auto_updater = AutoUpdater()
+        self.auto_updater = AutoUpdater(self.is_on_gcp)
         add_stackdriver_sink(log, self.instance_id)
 
     def loop(self, max_iters=None):
