@@ -114,8 +114,7 @@ class EvalWorker:
         log.log('CONTAINER', run_logs)
         log.info('Finished running container %s...' % docker_tag)
         exit_code = container.attrs['State']['ExitCode']
-        log_url = self.upload_logs(run_logs,
-                                   filename=f'{job.id}.txt')
+        log_url = self.upload_logs(run_logs, filename=f'{job.id}.txt')
         results = Box(logs=log_url)
         if exit_code == 0:
             results.update(self.get_results(results_dir=results_mount))
