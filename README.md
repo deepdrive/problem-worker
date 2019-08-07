@@ -40,5 +40,5 @@ docker logs <your-new-container-name> -f
 # the container will run on boot and restart if it dies.
 # c.f. https://docs.docker.com/engine/reference/run/#restart-policies---restart
 
-# Now stop the instance and create an image to fully bake our new eval VM
+# Now stop the instance and create an image to fully bake our new eval VM!
 ```
