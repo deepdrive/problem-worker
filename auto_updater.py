@@ -26,11 +26,12 @@ class AutoUpdater:
             log.debug('Checking for source changes')
             if now - self.last_update_check_time > 180:
                 ret = self.pull_latest(now)
+                self.last_update_check_time = time.time()
             else:
                 ret = False
         else:
             ret = self.pull_latest(now)
-        self.last_update_check_time = time.time()
+            self.last_update_check_time = time.time()
         return ret
 
     def pull_latest(self, now):

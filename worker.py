@@ -38,6 +38,8 @@ class EvalWorker:
         while True:
             if self.auto_updater.check():
                 # We will be auto restarted by systemd with new code
+                log.success('Ending loop, so that we are restarted with '
+                            'changes')
                 return
             # TODO: Avoid polling by creating a Firestore watch and using a
             #   mutex to avoid multiple threads processing the watch.
