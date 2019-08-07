@@ -35,8 +35,10 @@ class EvalWorker:
         log.info('Worker started, checking for jobs...')
         while True:
             if self.auto_updater.check():
-                # We will be auto restarted by supervisord with new code
+                # We will be auto restarted by systemd with new code
                 return
+            # TODO: Avoid polling by creating a Firestore watch and using a
+            #   mutex to avoid multiple threads processing the watch.
             job = self.check_for_jobs()
             if job:
                 if job.status == JOB_STATUS_TO_START:

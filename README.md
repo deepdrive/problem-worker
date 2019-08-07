@@ -16,14 +16,6 @@ Python 3.7+
 Start the NVIDIA GCP instance described [here](https://github.com/deepdrive/problem-endpoint/blob/6872b8df4a9a545918f5adbbd2be41d4dc6fcc57/create-deepdrive-eval-instance.http)
 
 ```
-
-sudo git clone https://github.com/deepdrive/problem-worker
-./worker.sh
-```
-
-
-```
-# Copy creds to /root/.gcpcreds
 mkdir ~/.gcpcreds
 
 # On local machine
@@ -33,9 +25,17 @@ silken-impulse-217423-8fbe5bbb2a10.json
 # On server
 sudo cp -p /home/craig_voyage_auto/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json /root/.gcpcreds
 
-# Clone this repo to /usr/local/src
+# Clone repo
+cd /usr/local/src
+sudo git clone https://github.com/deepdrive/problem-worker 
+
+# Note that the repo gets auto-updated with pushes to the production branch
 sudo apt install ruby
 sudo gem install pleaserun
-sudo pleaserun --install "docker-compose up -d"
-sudo systemctl enable docker-compose_up_-d.service
+sudo pleaserun --install --overwrite --name problem-worker --platform systemd /usr/local/src/problem-worker/bin/run_problem_worker.sh
+sudo systemctl enable problem-worker
+sudo systemctl start problem-worker
+
+# Check the logs
+sudo journalctl -u problem-worker -e -f
 ```
