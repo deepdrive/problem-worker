@@ -2,7 +2,7 @@
 
 TAG=deepdriveio/problem-worker
 SSH=gcloud compute ssh nvidia-gpu-cloud-tensorflow-image-1-vm-1
-RUN_ARGS=-v ~/.gcpcreds/:/root/.gcpcreds -v /var/run/docker.sock:/var/run/docker.sock
+RUN_ARGS=-v ~/.gcpcreds/:/root/.gcpcreds -v /var/run/docker.sock:/var/run/docker.sock -v `pwd`:/root/problem-worker
 RUN_ARGS_DEV=$(RUN_ARGS) -e INSTANCE_ID=notaninstanceid
 
 build:
