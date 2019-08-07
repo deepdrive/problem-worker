@@ -30,8 +30,6 @@ sudo cp /home/craig_voyage_auto/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.jso
 cd /usr/local/src
 sudo git clone https://github.com/deepdrive/problem-worker 
 
-
-
 # Check the logs
 docker logs 
 ```
