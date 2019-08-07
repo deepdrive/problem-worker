@@ -6,7 +6,10 @@ Process is self-updating from the production branch on GitHub.
 
 Worker is triggered via setting the worker's instance id in a job on Firestore.
 
-This process runs in a docker container and starts the sim / bot container via mapping the docker socket.
+This process runs in a docker container and starts the sim or bot container via mapping the docker socket.
+
+Instance managed by the [problem-endpoint](https://github.com/deepdrive/problem-endpoint)
+
 
 ## Requires 
 
@@ -30,7 +33,7 @@ sudo cp /home/craig_voyage_auto/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.jso
 
 # Clone repo
 cd /usr/local/src
-sudo git clone https://github.com/deepdrive/problem-worker 
+sudo git clone https://github.com/deepdrive/problem-worker --branch production
 
 # Perform initial run
 cd problem-worker
