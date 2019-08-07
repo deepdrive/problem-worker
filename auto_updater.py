@@ -25,16 +25,20 @@ class AutoUpdater:
         elif self.last_update_check_time is not None:
             log.debug('Checking for source changes')
             if self.last_update_check_time - now > 180:
-                log.info('Pulling latest from github')
-                self.last_update_check_time = now
-                if pull_latest():
-                    ret = True
-                else:
-                    ret = False
+                ret = self.pull_latest(now)
             else:
                 ret = False
         else:
             self.last_update_check_time = time.time()
+            ret = self.pull_latest(now)
+        return ret
+
+    def pull_latest(self, now):
+        log.info('Pulling latest from github')
+        self.last_update_check_time = now
+        if pull_latest():
+            ret = True
+        else:
             ret = False
         return ret
 
