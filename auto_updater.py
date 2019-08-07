@@ -24,7 +24,7 @@ class AutoUpdater:
             ret = False
         elif self.last_update_check_time is not None:
             log.debug('Checking for source changes')
-            if self.last_update_check_time - now > 180:
+            if now - self.last_update_check_time > 180:
                 ret = self.pull_latest(now)
             else:
                 ret = False
