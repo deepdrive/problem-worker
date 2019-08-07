@@ -40,9 +40,7 @@ class AutoUpdater:
             log.success('Pulled new changes')
             ret = True
         else:
-            log.success('Pulled new changes')
             ret = False
-        log.info('Done')
         return ret
 
 
