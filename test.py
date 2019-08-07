@@ -7,7 +7,7 @@ from common import get_eval_jobs_kv_store
 
 def test_eval_worker():
     os.environ['FORCE_FIRESTORE_DB'] = '1'
-    os.environ['FAKE_INSTANCE_ID'] = '9999999999999999999'
+    os.environ['INSTANCE_ID'] = '9999999999999999999'
     worker = EvalWorker()
     job_kv = get_eval_jobs_kv_store()
     job_id = 'TEST_JOB'
@@ -15,6 +15,7 @@ def test_eval_worker():
     test_job.status = JOB_STATUS_TO_START
     job_kv.set(job_id, test_job)
     job = worker.loop(max_iters=1)
+    assert job
     assert job.id == job.eval_spec.eval_id
     assert job.results
     assert job.results.logs

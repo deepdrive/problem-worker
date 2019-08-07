@@ -23,7 +23,8 @@ gcloud compute scp ~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json nvidia-gp
 silken-impulse-217423-8fbe5bbb2a10.json
 
 # On server
-sudo cp -p /home/craig_voyage_auto/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json /root/.gcpcreds
+sudo mkdir /root/.gcpcreds
+sudo cp /home/craig_voyage_auto/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json /root/.gcpcreds/
 
 # Clone repo
 cd /usr/local/src

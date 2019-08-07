@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from copy import deepcopy
 from random import random
 
 import requests
@@ -16,6 +17,7 @@ from constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
     BOTLEAGUE_LOG_DIR, JOB_STATUS_TO_START
 from logs import add_stackdriver_sink
+from utils import is_docker
 
 container_run_level = log.level("CONTAINER", no=20, color="<magenta>")
 
@@ -75,12 +77,18 @@ class EvalWorker:
         return ret
 
     def mark_job_finished(self, job):
-        job.status = JOB_STATUS_FINISHED
-        self.db.set(job.id, job)
+        self.set_job_status(job, JOB_STATUS_FINISHED)
 
     def mark_job_running(self, job):
-        job.status = JOB_STATUS_RUNNING
-        self.db.set(job.id, job)
+        self.set_job_status(job, JOB_STATUS_RUNNING)
+
+    def set_job_status(self, job, status):
+        old_job = deepcopy(job)
+        job.status = status
+        if not self.db.compare_and_swap(job.id, old_job, job):
+            new_job = self.db.get(job.id)
+            raise RuntimeError(f'Job status transaction failed, '
+                               f'expected {old_job}\ngot {new_job}')
 
     def run_job(self, job):
         docker_tag = job.eval_spec.docker_tag
@@ -93,8 +101,7 @@ class EvalWorker:
         log.info('Pulling docker image %s...' % docker_tag)
         self.docker.images.pull(docker_tag)
         log.info('Running container %s...' % docker_tag)
-        results_mount = f'/mnt/botleague_results/{eval_spec.eval_id}'
-        os.makedirs(results_mount, exist_ok=True)
+        results_mount = self.get_results_dir(eval_spec)
         container = self.run_container(
             docker_tag,
             env=container_env,
@@ -115,6 +122,16 @@ class EvalWorker:
                 f'Container failed with exit code {exit_code}'
         job.results = results
         self.send_results(job)
+
+    @staticmethod
+    def get_results_dir(eval_spec):
+        if is_docker():
+            results_mount_base = '/mnt/botleague_results'
+        else:
+            results_mount_base = f'{DIR}/botleague_results'
+        results_mount = f'{results_mount_base}/{eval_spec.eval_id}'
+        os.makedirs(results_mount, exist_ok=True)
+        return results_mount
 
     @staticmethod
     def send_results(job):
