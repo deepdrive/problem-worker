@@ -34,12 +34,15 @@ class AutoUpdater:
         return ret
 
     def pull_latest(self, now):
-        log.info('Pulling latest from github')
+        log.info('Pulling latest from github..')
         self.last_update_check_time = now
         if pull_latest():
+            log.success('Pulled new changes')
             ret = True
         else:
+            log.success('Pulled new changes')
             ret = False
+        log.info('Done')
         return ret
 
 
@@ -63,6 +66,7 @@ def pull_latest(check_first=False, remote_branch='production'):
 
     if should_pull:
         pull_result = repo.git.pull('origin', remote_branch)
+        log.info(pull_result)
         if pull_result != 'Already up to date.':
             ret = True
     return ret
