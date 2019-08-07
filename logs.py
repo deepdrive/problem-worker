@@ -14,7 +14,29 @@ ERROR	(500) Error events are likely to cause problems.
 CRITICAL	(600) Critical events cause more severe problems or outages.
 ALERT	(700) A person must take an action immediately.
 EMERGENCY	(800) One or more systems are unusable.
+
+LOGURU severities
++----------------------+------------------------+------------------------+
+| Level name           | Severity value         | Logger method          |
++======================+========================+========================+
+| ``TRACE``            | 5                      | |logger.trace|         |
++----------------------+------------------------+------------------------+
+| ``DEBUG``            | 10                     | |logger.debug|         |
++----------------------+------------------------+------------------------+
+| ``INFO``             | 20                     | |logger.info|          |
++----------------------+------------------------+------------------------+
+| ``SUCCESS``          | 25                     | |logger.success|       |
++----------------------+------------------------+------------------------+
+| ``WARNING``          | 30                     | |logger.warning|       |
++----------------------+------------------------+------------------------+
+| ``ERROR``            | 40                     | |logger.error|         |
++----------------------+------------------------+------------------------+
+| ``CRITICAL``         | 50                     | |logger.critical|      |
++----------------------+------------------------+------------------------+
 """
+
+VALID_STACK_DRIVER_LEVELS = ['DEFAULT', 'DEBUG', 'INFO', 'NOTICE', 'WARNING',
+                             'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY']
 
 
 def add_stackdriver_sink(loguru_logger, instance_id):
@@ -31,8 +53,10 @@ def add_stackdriver_sink(loguru_logger, instance_id):
             severity = 'DEBUG'
         elif level == 'EXCEPTION':
             severity = 'ERROR'
-        else:
+        elif level in VALID_STACK_DRIVER_LEVELS:
             severity = level
+        else:
+            severity = 'INFO'
         stackdriver_logger.log_text(message, severity=severity)
 
     loguru_logger.add(sink)
