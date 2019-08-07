@@ -30,6 +30,15 @@ sudo cp /home/craig_voyage_auto/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.jso
 cd /usr/local/src
 sudo git clone https://github.com/deepdrive/problem-worker 
 
-# Check the logs
-docker logs 
+# Perform initial run
+cd problem-worker
+make run
+docker ps
+docker logs <your-new-container-name> -f
+
+# If everything looks good after 10 seconds, 
+# the container will run on boot and restart if it dies.
+# c.f. https://docs.docker.com/engine/reference/run/#restart-policies---restart
+
+# Now stop the instance and create an image to fully bake our new eval VM
 ```
