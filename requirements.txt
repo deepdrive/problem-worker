@@ -8,9 +8,6 @@ loguru
 pytest
 GitPython>=2.1.11
 ipython
-
-# Vendor this into git to avoid a docker pull when we change it.
-# I.e. update botleague-helpers via auto_updater.py
--e git://github.com/botleague/botleague-helpers.git#egg=botleague-helpers==0.1.0
+botleague-helpers>=0.1.0
 
 

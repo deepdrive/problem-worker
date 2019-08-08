@@ -8,4 +8,15 @@ set -o pipefail  # Causes a pipeline to return the exit status of the last comma
 # For running on cloud VM in docker
 DIR=`dirname "$0"`
 cd ${DIR}/..
-make run
+
+KEY_FILE=/root/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json
+
+if [[ -f ${KEY_FILE} ]]; then
+    echo Adding service account
+    gcloud auth activate-service-account --key-file=${KEY_FILE}
+    gcloud auth configure-docker --quiet
+fi
+
+pip install -r requirements.txt
+
+python -u worker.py

@@ -12,4 +12,4 @@ RUN git config --global user.name "Problem Worker"
 # These files will be shadowed by local files due to pwd mount (see Makefile)
 COPY . .
 
-CMD bin/configure_gcloud_docker_service_account.sh && python -u worker.py
+CMD bin/run.sh

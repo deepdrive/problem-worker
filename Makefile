@@ -18,7 +18,7 @@ ssh:
 	$(SSH)
 
 run:
-	docker run $(RUN_ARGS) --restart=unless-stopped --detach -e LOGURU_LEVEL=DEBUG $(TAG)
+	docker run $(RUN_ARGS) --restart=unless-stopped --detach -e LOGURU_LEVEL=INFO $(TAG)
 
 devrun:
 	docker run $(RUN_ARGS_DEV) -it $(TAG)
