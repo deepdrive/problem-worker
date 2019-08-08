@@ -6,7 +6,7 @@ import requests
 from loguru import logger as log
 
 from botleague_helpers.config import in_test
-from botleague_helpers.key_value_store import get_key_value_store
+from botleague_helpers.db import get_db
 
 from constants import EVAL_JOBS_COLLECTION_NAME, METADATA_URL
 
@@ -19,8 +19,8 @@ def is_json(string: str):
     return True
 
 
-def get_eval_jobs_kv_store():
-    return get_key_value_store(
+def get_eval_jobs_db():
+    return get_db(
         EVAL_JOBS_COLLECTION_NAME,
         use_boxes=True,
         force_firestore_db=should_force_firestore_db()

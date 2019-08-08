@@ -24,7 +24,7 @@ Start the NVIDIA GCP instance described [here](https://github.com/deepdrive/prob
 mkdir ~/.gcpcreds
 
 # On local machine
-gcloud compute scp ~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json nvidia-gpu-cloud-tensorflow-image-1-vm-2:~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json
+gcloud compute scp ~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json <your-problem-worker>:~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json
 silken-impulse-217423-8fbe5bbb2a10.json
 
 # On server
@@ -41,9 +41,14 @@ make run
 docker ps
 docker logs <your-new-container-name> -f
 
-# If everything looks good after 10 seconds, 
-# the container will run on boot and restart if it dies.
-# c.f. https://docs.docker.com/engine/reference/run/#restart-policies---restart
-
-# Now stop the instance and create an image to fully bake our new eval VM!
 ```
+If everything looks good after 10 seconds, 
+the container will run on boot and restart if it dies.
+c.f. [docker restart](https://docs.docker.com/engine/reference/run/#restart-policies---restart)
+
+Now stop the instance and create an image to fully bake your new eval VM!
+
+
+Note that from now own, the source will be automatically updated with the 
+auto_updater using git. There's no need to rebuild the container unless the 
+dependencies change.

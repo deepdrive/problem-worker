@@ -12,7 +12,7 @@ from loguru import logger as log
 from botleague_helpers.config import in_test
 
 from auto_updater import pull_latest, AutoUpdater
-from common import is_json, get_eval_jobs_kv_store, fetch_instance_id
+from common import is_json, get_eval_jobs_db, fetch_instance_id
 from constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
     BOTLEAGUE_LOG_DIR, JOB_STATUS_TO_START
@@ -25,10 +25,10 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 class EvalWorker:
-    def __init__(self):
+    def __init__(self, db=None):
         self.instance_id, self.is_on_gcp = fetch_instance_id()
         self.docker = docker.from_env()
-        self.db = get_eval_jobs_kv_store()
+        self.db = db or get_eval_jobs_db()
         self.auto_updater = AutoUpdater(self.is_on_gcp)
         add_stackdriver_sink(log, self.instance_id)
 
@@ -48,7 +48,11 @@ class EvalWorker:
                 if job.status == JOB_STATUS_TO_START:
                     self.mark_job_running(job)
                     self.run_job(job)
-                    self.mark_job_finished(job)
+
+                    # We've added results to the job so disable compare_and_swap
+                    # The initial check to mark running will be enough to
+                    # to prevent multiple runners.
+                    self.mark_job_finished(job, atomic=False)
 
             # TODO: Send heartbeat every minute? We'll be restarted after
             #  and idle timeout, so not that big of a deal.
@@ -78,19 +82,22 @@ class EvalWorker:
             ret = Box(jobs[0].to_dict())
         return ret
 
-    def mark_job_finished(self, job):
-        self.set_job_status(job, JOB_STATUS_FINISHED)
+    def mark_job_finished(self, job, atomic=False):
+        self.set_job_status(job, JOB_STATUS_FINISHED, atomic)
 
     def mark_job_running(self, job):
         self.set_job_status(job, JOB_STATUS_RUNNING)
 
-    def set_job_status(self, job, status):
+    def set_job_status(self, job, status, atomic=True):
         old_job = deepcopy(job)
         job.status = status
-        if not self.db.compare_and_swap(job.id, old_job, job):
-            new_job = self.db.get(job.id)
-            raise RuntimeError(f'Job status transaction failed, '
-                               f'expected {old_job}\ngot {new_job}')
+        if atomic:
+            if not self.db.compare_and_swap(job.id, old_job, job):
+                new_job = self.db.get(job.id)
+                raise RuntimeError(f'Job status transaction failed, '
+                                   f'expected {old_job}\ngot {new_job}')
+        else:
+            self.db.set(job.id, job)
 
     def run_job(self, job):
         docker_tag = job.eval_spec.docker_tag
