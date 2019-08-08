@@ -50,6 +50,7 @@ Now stop the instance (leave the container running so it restarts)
 and create an image to fully bake your new eval VM!
 
 
-Note that from now own, the source will be automatically updated with the 
-auto_updater using git. There's no need to rebuild the container unless the 
-dependencies change.
+Note that from now on, the source will be automatically updated with the 
+auto_updater using git. There's no need to rebuild the container even if 
+the python dependencies change (since we install requirements.txt on start
+and will restart if requirements.txt changes).
