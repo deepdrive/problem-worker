@@ -42,11 +42,12 @@ docker ps
 docker logs <your-new-container-name> -f
 
 ```
-If everything looks good after 10 seconds, 
-the container will run on boot and restart if it dies.
+If everything looks good after 10 seconds, the container will run on boot and 
+restart if it dies.
 c.f. [docker restart](https://docs.docker.com/engine/reference/run/#restart-policies---restart)
 
-Now stop the instance and create an image to fully bake your new eval VM!
+Now stop the instance (leave the container running so it restarts) 
+and create an image to fully bake your new eval VM!
 
 
 Note that from now own, the source will be automatically updated with the 

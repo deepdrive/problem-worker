@@ -1,0 +1,10 @@
+setuptools>=38.6.0
+twine>=1.11.0
+wheel>=0.31.0
+firebase-admin>=2.16.0
+google-cloud-firestore>=0.32.1
+google-cloud-storage>=1.15.0
+google-cloud-logging
+pytest>=4.4.1
+PyGithub>=1.43.6
+python-box
