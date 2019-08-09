@@ -7,12 +7,14 @@ from random import random
 import requests
 import docker
 from box import Box
+from google.cloud.firestore_v1 import SERVER_TIMESTAMP
 from loguru import logger as log
 
 from botleague_helpers.config import in_test
 
 from auto_updater import pull_latest, AutoUpdater
-from common import is_json, get_eval_jobs_db, fetch_instance_id
+from common import is_json, get_eval_jobs_db, fetch_instance_id, \
+    get_eval_instances_db
 from constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
     BOTLEAGUE_LOG_DIR, JOB_STATUS_TO_START
@@ -24,11 +26,19 @@ container_run_level = log.level("CONTAINER", no=20, color="<magenta>")
 DIR = os.path.dirname(os.path.realpath(__file__))
 
 
+def safe_box_update(box_to_update, **fields):
+    # https://github.com/cdgriffith/Box/issues/98
+    box_to_update = box_to_update.to_dict()
+    box_to_update.update(**fields)
+    box_to_update = Box(box_to_update)
+    return box_to_update
+
+
 class EvalWorker:
-    def __init__(self, db=None):
+    def __init__(self, jobs_db=None, instances_db=None):
         self.instance_id, self.is_on_gcp = fetch_instance_id()
         self.docker = docker.from_env()
-        self.db = db or get_eval_jobs_db()
+        self.jobs_db = jobs_db or get_eval_jobs_db()
         self.auto_updater = AutoUpdater(self.is_on_gcp)
         add_stackdriver_sink(log, self.instance_id)
 
@@ -41,21 +51,15 @@ class EvalWorker:
                 log.success('Ending loop, so that we are restarted with '
                             'changes')
                 return
-            # TODO: Avoid polling by creating a Firestore watch and using a
-            #   mutex to avoid multiple threads processing the watch.
             job = self.check_for_jobs()
             if job:
                 if job.status == JOB_STATUS_TO_START:
                     self.mark_job_running(job)
                     self.run_job(job)
-
-                    # We've added results to the job so disable compare_and_swap
-                    # The initial check to mark running will be enough to
-                    # to prevent multiple runners.
-                    self.mark_job_finished(job, atomic=False)
+                    self.mark_job_finished(job)
 
             # TODO: Send heartbeat every minute? We'll be restarted after
-            #  and idle timeout, so not that big of a deal.
+            #  and idle or job timeout, so not that big of a deal.
 
             # TODO: Clean up containers and images with LRU and depending on
             #  disk space. Shouldn't matter until more problems and providers
@@ -69,7 +73,9 @@ class EvalWorker:
             time.sleep(0.5 + random())
 
     def check_for_jobs(self) -> Box:
-        job_query = self.db.collection.where(
+        # TODO: Avoid polling by creating a Firestore watch and using a
+        #   mutex to avoid multiple threads processing the watch.
+        job_query = self.jobs_db.collection.where(
             'instance_id', '==', self.instance_id)
         jobs = list(job_query.stream())
         ret = Box()
@@ -82,22 +88,26 @@ class EvalWorker:
             ret = Box(jobs[0].to_dict())
         return ret
 
-    def mark_job_finished(self, job, atomic=False):
-        self.set_job_status(job, JOB_STATUS_FINISHED, atomic)
+    def mark_job_finished(self, job):
+        # We've added results to the job so disable compare_and_swap
+        # The initial check to mark running will be enough to
+        # to prevent multiple runners.
+        job.status = JOB_STATUS_FINISHED
+        job.finished_at = SERVER_TIMESTAMP
+        self.jobs_db.set(job.id, job)
 
     def mark_job_running(self, job):
-        self.set_job_status(job, JOB_STATUS_RUNNING)
+        self.set_job_atomic(job,
+                            status=JOB_STATUS_RUNNING,
+                            started_at=SERVER_TIMESTAMP)
 
-    def set_job_status(self, job, status, atomic=True):
+    def set_job_atomic(self, job, **fields):
         old_job = deepcopy(job)
-        job.status = status
-        if atomic:
-            if not self.db.compare_and_swap(job.id, old_job, job):
-                new_job = self.db.get(job.id)
-                raise RuntimeError(f'Job status transaction failed, '
-                                   f'expected {old_job}\ngot {new_job}')
-        else:
-            self.db.set(job.id, job)
+        job = safe_box_update(job, **fields)
+        if not self.jobs_db.compare_and_swap(job.id, old_job, job):
+            new_job = self.jobs_db.get(job.id)
+            raise RuntimeError(f'Job status transaction failed, '
+                               f'expected {old_job}\ngot {new_job}')
 
     def run_job(self, job):
         docker_tag = job.eval_spec.docker_tag
@@ -126,7 +136,7 @@ class EvalWorker:
         if exit_code == 0:
             results.update(self.get_results(results_dir=results_mount))
         else:
-            results['error'] = \
+            results.error = \
                 f'Container failed with exit code {exit_code}'
         job.results = results
         self.send_results(job)

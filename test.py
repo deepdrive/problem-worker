@@ -36,7 +36,7 @@ def test_eval_worker():
 
     try:
         jobs_db.set(job_id, test_job)
-        worker = EvalWorker(db=jobs_db)
+        worker = EvalWorker(jobs_db=jobs_db)
         job = worker.loop(max_iters=1)
         assert job
         assert job.id == job.eval_spec.eval_id

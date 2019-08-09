@@ -8,7 +8,8 @@ from loguru import logger as log
 from botleague_helpers.config import in_test
 from botleague_helpers.db import get_db
 
-from constants import EVAL_JOBS_COLLECTION_NAME, METADATA_URL
+from constants import EVAL_JOBS_COLLECTION_NAME, METADATA_URL, \
+    EVAL_INSTANCES_COLLECTION_NAME
 
 
 def is_json(string: str):
@@ -26,6 +27,13 @@ def get_eval_jobs_db():
         force_firestore_db=should_force_firestore_db()
     )
 
+
+def get_eval_instances_db():
+    return get_db(
+        EVAL_INSTANCES_COLLECTION_NAME,
+        use_boxes=True,
+        force_firestore_db=should_force_firestore_db()
+    )
 
 def fetch_instance_id() -> Tuple[str, bool]:
     if in_test() or 'INSTANCE_ID' in os.environ:
