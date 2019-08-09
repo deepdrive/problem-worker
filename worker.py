@@ -76,7 +76,8 @@ class EvalWorker:
         # TODO: Avoid polling by creating a Firestore watch and using a
         #   mutex to avoid multiple threads processing the watch.
         job_query = self.jobs_db.collection.where(
-            'instance_id', '==', self.instance_id)
+            'instance_id', '==', self.instance_id).where(
+            'status', '==', JOB_STATUS_TO_START)
         jobs = list(job_query.stream())
         ret = Box()
         if len(jobs) > 1:
