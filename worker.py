@@ -6,7 +6,8 @@ from random import random
 
 import requests
 import docker
-from box import Box
+from box import Box, BoxList
+from docker.models.images import Image
 from google.cloud.firestore_v1 import SERVER_TIMESTAMP
 from loguru import logger as log
 
@@ -17,7 +18,8 @@ from common import is_json, get_eval_jobs_db, fetch_instance_id, \
     get_eval_instances_db
 from constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
-    BOTLEAGUE_LOG_DIR, JOB_STATUS_TO_START
+    BOTLEAGUE_LOG_DIR, JOB_STATUS_TO_START, CONTAINER_RUN_OPTIONS, \
+    BOTLEAGUE_INNER_RESULTS_DIR_NAME
 from logs import add_stackdriver_sink
 from utils import is_docker
 
@@ -35,18 +37,19 @@ def safe_box_update(box_to_update, **fields):
 
 
 class EvalWorker:
-    def __init__(self, jobs_db=None, instances_db=None):
+    def __init__(self, jobs_db=None, run_problem_only=False):
         self.instance_id, self.is_on_gcp = fetch_instance_id()
         self.docker = docker.from_env()
         self.jobs_db = jobs_db or get_eval_jobs_db()
         self.auto_updater = AutoUpdater(self.is_on_gcp)
+        self.run_problem_only = run_problem_only
         add_stackdriver_sink(log, self.instance_id)
 
     def loop(self, max_iters=None):
         iters = 0
         log.info('Worker started, checking for jobs...')
         while True:
-            if self.auto_updater.check():
+            if self.auto_updater.updated():
                 # We will be auto restarted by systemd with new code
                 log.success('Ending loop, so that we are restarted with '
                             'changes')
@@ -111,36 +114,105 @@ class EvalWorker:
                                f'expected {old_job}\ngot {new_job}')
 
     def run_job(self, job):
-        docker_tag = job.eval_spec.docker_tag
+        # TODO: Support N bot and N problem containers
         eval_spec = job.eval_spec
+
+        problem_tag = f'deepdriveio/deepdrive:problem_{eval_spec.problem}'
+        bot_tag = job.eval_spec.docker_tag
+
+        problem_image = self.get_image(problem_tag)
+        bot_image = self.get_image(bot_tag)
+
+        problem_container_args, results_mount = self.get_problem_container_args(
+            problem_tag, eval_spec)
+        bot_container_args = dict(docker_tag=bot_tag)
+
+        logs = Box()
+        errors = Box()
+        results = Box(
+            logs=logs,
+            errors=errors,
+
+            # We will eventually have many problem and bot containers to do
+            # things like fuzzing or A3C training etc...
+            problem_images=[problem_image.attrs],
+            bot_images=[bot_image.attrs],)
+
+        containers = [problem_container_args]
+        if not self.run_problem_only:
+            containers.append(bot_container_args)
+        containers, success = self.run_containers(containers)
+        self.upload_all_container_logs(containers, errors, job, logs)
+        if success:
+            # Fetch results stored on the host by the problem container
+            results.update(self.get_results(results_dir=results_mount))
+        job.results = results
+        self.send_results(job)
+
+    def upload_all_container_logs(self, containers, errors, job, logs):
+        for container in containers:
+            image_name = container.attrs["Config"]["Image"]
+            container_id = \
+                f'{image_name}_{container.short_id}'
+            run_logs = container.logs().decode()
+            log.log('CONTAINER', run_logs)
+            exit_code = container.attrs['State']['ExitCode']
+            if exit_code != 0:
+                errors[container_id] = f'Container failed with' \
+                    f' exit code {exit_code}'
+            log_url = self.upload_logs(
+                run_logs, filename=f'{image_name}_job-{job.id}.txt')
+            log.info(f'Uploaded logs for {container_id} to {log_url}')
+            logs[container_id] = log_url
+
+    def get_image(self, tag):
+        log.info('Pulling docker image %s...' % tag)
+        result = self.docker.images.pull(tag)
+        log.info('Finished pulling docker image %s' % tag)
+        if isinstance(result, list):
+            ret = self.get_latest_docker_image(result)
+            if ret is None:
+                raise RuntimeError(
+                    f'Could not get pull latest image for {tag}. '
+                    f'tags found were: {result}')
+        elif isinstance(result, Image):
+            ret = result
+        else:
+            log.warning(f'Got unexpected result when pulling {tag} of {result}')
+            ret = result
+        return ret
+
+    @staticmethod
+    def get_latest_docker_image(images):
+        for image in images:
+            for tag in image.attrs['RepoTags']:
+                if tag.endswith(':latest'):
+                    return image
+        return None
+
+    def get_problem_container_args(self, tag, eval_spec):
         container_env = dict(
             BOTLEAGUE_EVAL_KEY=eval_spec.eval_key,
             BOTLEAGUE_SEED=eval_spec.seed,
             BOTLEAUGE_PROBLEM=eval_spec.problem,
-            BOTLEAGUE_RESULT_FILEPATH=BOTLEAGUE_RESULTS_FILEPATH,)
-        log.info('Pulling docker image %s...' % docker_tag)
-        self.docker.images.pull(docker_tag)
-        log.info('Running container %s...' % docker_tag)
+            BOTLEAGUE_RESULT_FILEPATH=f'{BOTLEAGUE_RESULTS_DIR}/{BOTLEAGUE_INNER_RESULTS_DIR_NAME}',  # TODO: Change FILEPATH to DIR in deepdrive
+            DEEPDRIVE_UPLOAD='1',
+            GOOGLE_APPLICATION_CREDENTIALS='/mnt/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json'
+        )
         results_mount = self.get_results_mount(eval_spec)
-        container = self.run_container(
-            docker_tag,
-            env=container_env,
-            volumes={
-                results_mount: {'bind': BOTLEAGUE_RESULTS_DIR, 'mode': 'rw'}
-            })
-        run_logs = container.logs().decode()
-        log.log('CONTAINER', run_logs)
-        log.info('Finished running container %s...' % docker_tag)
-        exit_code = container.attrs['State']['ExitCode']
-        log_url = self.upload_logs(run_logs, filename=f'{job.id}.txt')
-        results = Box(logs=log_url)
-        if exit_code == 0:
-            results.update(self.get_results(results_dir=results_mount))
-        else:
-            results.error = \
-                f'Container failed with exit code {exit_code}'
-        job.results = results
-        self.send_results(job)
+        container = dict(docker_tag=tag,
+                         env=container_env,
+                         volumes={
+                             results_mount: {
+                                 'bind': BOTLEAGUE_RESULTS_DIR,
+                                 'mode': 'rw'
+                             },
+                             '/root/.gcpcreds': {
+                                 'bind': '/mnt/.gcpcreds',
+                                 'mode': 'rw'
+                             }
+                         })
+        return container, results_mount
 
     @staticmethod
     def get_results_mount(eval_spec):
@@ -163,7 +235,8 @@ class EvalWorker:
     @staticmethod
     def get_results(results_dir) -> dict:
         results = {}
-        result_str = open(f'{results_dir}/results.json').read()
+        directory = f'{results_dir}/{BOTLEAGUE_INNER_RESULTS_DIR_NAME}'
+        result_str = open(f'{directory}/results.json').read()
         if is_json(result_str):
             results.update(json.loads(result_str))
         else:
@@ -171,15 +244,60 @@ class EvalWorker:
                 f'No results file found at {BOTLEAGUE_RESULTS_FILEPATH}'
         return results
 
-    def run_container(self, docker_tag, cmd=None, env=None, volumes=None):
+    def run_containers(self, containers: list = None):
+        log.info('Running containers %s...' % containers)
+        containers = [self.start_container(**c) for c in containers]
+        try:
+            containers, success = self.monitor_containers(containers)
+        except Exception as e:
+            log.error('Exception encountered while running, '
+                      'stopping all containers')
+            for container in containers:
+                log.error(f'Stopping orphaned container: {container}')
+                container.stop(timeout=1)
+            raise e
+        return containers, success
+
+    def monitor_containers(self, containers):
+        success = True
+        running = True
+        failed = False
+        dead = False
+        while running and not (failed or dead):
+            # Refresh container status
+            containers = [self.docker.containers.get(c.short_id)
+                          for c in containers]
+
+            running = [c for c in containers if c.status in
+                       ['created', 'running']]
+
+            # TODO: For N bots or N problems, we probably want to make a best
+            #  effort so long as at least 1 bot and one problem are still alive.
+            dead = [c for c in containers if c.status == 'dead']
+            failed = [c for c in containers if c.attrs['State']['ExitCode'] > 0]
+
+            if dead:
+                success = False
+                log.error(f'Dead container(s) found: {dead}')
+
+            if failed:
+                success = False
+                log.error(f'Containers failed: {failed}')
+
+            time.sleep(0.1)
+        for container in running:
+            log.error(f'Stopping orphaned container: {container}')
+            container.stop(timeout=1)
+        log.info('Finished running containers %s' % containers)
+        return containers, success
+
+    def start_container(self, docker_tag, cmd=None, env=None, volumes=None):
         container = self.docker.containers.run(docker_tag, command=cmd,
                                                detach=True, stdout=False,
                                                stderr=False,
                                                environment=env,
-                                               volumes=volumes)
-        while container.status in ['created', 'running']:
-            container = self.docker.containers.get(container.short_id)
-            time.sleep(0.1)
+                                               volumes=volumes,
+                                               **CONTAINER_RUN_OPTIONS)
         return container
 
     @staticmethod

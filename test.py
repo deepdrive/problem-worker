@@ -8,7 +8,9 @@ from constants import JOB_STATUS_TO_START, JOB_STATUS_FINISHED
 from worker import EvalWorker
 
 
-def test_eval_worker():
+def test_worker(problem='problem-worker-test',
+                bot_tag='deepdriveio/deepdrive:problem_problem-worker-test',
+                run_problem_only=False):
     os.environ['FORCE_FIRESTORE_DB'] = '1'
 
     instance_id = '9999999999999999999'
@@ -27,16 +29,16 @@ def test_eval_worker():
         'id': job_id,
         'instance_id': instance_id,
         'eval_spec': {
-            'docker_tag': 'deepdriveio/problem-worker-test',
+            'docker_tag': bot_tag,
             'eval_id': job_id,
             'eval_key': 'fake_eval_key',
             'seed': 1,
-            'problem': 'domain_randomization',
+            'problem': problem,
             'pull_request': None}})
 
     try:
         jobs_db.set(job_id, test_job)
-        worker = EvalWorker(jobs_db=jobs_db)
+        worker = EvalWorker(jobs_db=jobs_db, run_problem_only=run_problem_only)
         job = worker.loop(max_iters=1)
         assert job
         assert job.id == job.eval_spec.eval_id
@@ -50,4 +52,7 @@ def test_eval_worker():
 
 
 if __name__ == '__main__':
-    test_eval_worker()
+    # test_worker('deepdriveio/deepdrive:bot_domain_randomization')
+    test_worker('domain_randomization',
+                bot_tag='deepdriveio/deepdrive:bot_domain_randomization')
+    # test_worker(problem='problem-worker-test', run_problem_only=True)
