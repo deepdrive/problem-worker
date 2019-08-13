@@ -58,6 +58,7 @@ class EvalWorker:
             if job:
                 if job.status == JOB_STATUS_TO_START:
                     self.mark_job_running(job)
+                    self.stop_old_jobs_if_running()
                     self.run_job(job)
                     self.mark_job_finished(job)
 
@@ -316,6 +317,19 @@ class EvalWorker:
         blob.upload_from_string(logs)
         url = f'https://storage.googleapis.com/{BOTLEAGUE_LOG_BUCKET}/{key}'
         return url
+
+    def stop_old_jobs_if_running(self):
+        containers = self.docker.containers.list()
+        def is_botleague(container):
+            image_name = container.image.attrs['RepoTags'][0]
+            if image_name.startswith('deepdriveio/deepdrive:problem_') or \
+                image_name.startswith('deepdriveio/deepdrive:bot_'):
+                    return True
+            return False
+
+        for container in containers:
+            if container.status == 'running' and is_botleague(container):
+                container.stop()
 
 
 def main():
