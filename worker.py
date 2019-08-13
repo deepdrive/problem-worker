@@ -197,7 +197,7 @@ class EvalWorker:
             BOTLEAUGE_PROBLEM=eval_spec.problem,
             BOTLEAGUE_RESULT_FILEPATH=f'{BOTLEAGUE_RESULTS_DIR}/{BOTLEAGUE_INNER_RESULTS_DIR_NAME}',  # TODO: Change FILEPATH to DIR in deepdrive
             DEEPDRIVE_UPLOAD='1',
-            GOOGLE_APPLICATION_CREDENTIALS='/mnt/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json'
+            GOOGLE_APPLICATION_CREDENTIALS='/root/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json'
         )
         results_mount = self.get_results_mount(eval_spec)
         container = dict(docker_tag=tag,
@@ -208,7 +208,7 @@ class EvalWorker:
                                  'mode': 'rw'
                              },
                              '/root/.gcpcreds': {
-                                 'bind': '/mnt/.gcpcreds',
+                                 'bind': '/root/.gcpcreds',
                                  'mode': 'rw'
                              }
                          })
