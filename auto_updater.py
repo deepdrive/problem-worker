@@ -15,7 +15,7 @@ class AutoUpdater:
             log.info('Not pulling latest on non-gcp machines, assuming you are '
                      'in dev')
 
-    def check(self) -> bool:
+    def updated(self) -> bool:
         """
         :return: Whether or not we updated our local repo
         """
