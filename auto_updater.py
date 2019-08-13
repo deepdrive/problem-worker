@@ -24,7 +24,7 @@ class AutoUpdater:
             ret = False
         elif self.last_update_check_time is not None:
             log.debug('Checking for source changes')
-            if now - self.last_update_check_time > 1:
+            if now - self.last_update_check_time > 3:
                 ret = self.pull_latest(now)
                 self.last_update_check_time = time.time()
             else:
@@ -35,7 +35,7 @@ class AutoUpdater:
         return ret
 
     def pull_latest(self, now):
-        log.info('Pulling latest from github..')
+        log.debug('Pulling latest from github..')
         self.last_update_check_time = now
         if pull_latest():
             log.success('Pulled new changes')
