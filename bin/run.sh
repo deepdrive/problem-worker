@@ -11,6 +11,8 @@ cd ${DIR}/..
 
 KEY_FILE=/root/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json
 
+chmod -R 665 /root/.gcpcreds
+
 if [[ -f ${KEY_FILE} ]]; then
     echo Adding service account
     gcloud auth activate-service-account --key-file=${KEY_FILE}
