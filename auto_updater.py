@@ -65,9 +65,10 @@ def pull_latest(check_first=False, remote_branch='production'):
 
     if should_pull:
         pull_result = repo.git.pull('origin', remote_branch)
-        log.info(pull_result)
         if pull_result != 'Already up to date.':
             ret = True
+            log.info(pull_result)
+
     return ret
 
 
