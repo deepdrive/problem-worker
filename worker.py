@@ -227,6 +227,7 @@ class EvalWorker:
             results_mount_base = f'{DIR}/botleague_results'
         results_mount = f'{results_mount_base}/{eval_spec.eval_id}'
         os.makedirs(results_mount, exist_ok=True)
+        os.system(f'chmod -R 777 {results_mount}')
         log.info(f'results mount {results_mount}')
         return results_mount
 
