@@ -53,7 +53,7 @@ def test_worker(problem='problem-worker-test',
 
 def test_stop_old_jobs():
     worker = EvalWorker()
-    worker.stop_old_jobs_if_running()
+    worker.stop_old_containers_if_running()
 
 
 if __name__ == '__main__':

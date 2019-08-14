@@ -20,6 +20,7 @@ from problem_constants.constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED,
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
     BOTLEAGUE_LOG_DIR, CONTAINER_RUN_OPTIONS, \
     BOTLEAGUE_INNER_RESULTS_DIR_NAME, JOB_STATUS_ASSIGNED
+from problem_constants import constants
 from logs import add_stackdriver_sink
 from utils import is_docker
 
@@ -37,10 +38,15 @@ def safe_box_update(box_to_update, **fields):
 
 
 class EvalWorker:
-    def __init__(self, jobs_db=None, run_problem_only=False):
+    def __init__(self, jobs_db=None, instances_db=None, run_problem_only=False):
         self.instance_id, self.is_on_gcp = fetch_instance_id()
         self.docker = docker.from_env()
         self.jobs_db = jobs_db or get_eval_jobs_db()
+
+        # Use this sparingly. Event loop should do most of the management
+        # of instances so as to avoid race conditions.
+        self.instances_db = instances_db or get_eval_instances_db()
+
         self.auto_updater = AutoUpdater(self.is_on_gcp)
         self.run_problem_only = run_problem_only
         add_stackdriver_sink(log, self.instance_id)
@@ -54,11 +60,11 @@ class EvalWorker:
                 log.success('Ending loop, so that we are restarted with '
                             'changes')
                 return
+            self.stop_old_containers_if_running()
             job = self.check_for_jobs()
             if job:
                 if job.status == JOB_STATUS_ASSIGNED:
                     self.mark_job_running(job)
-                    self.stop_old_jobs_if_running()
                     self.run_job(job)
                     self.mark_job_finished(job)
 
@@ -234,16 +240,33 @@ class EvalWorker:
         log.info(f'results mount {results_mount}')
         return results_mount
 
-    @staticmethod
-    def send_results(job):
+    def send_results(self, job):
         if in_test():
             return
         else:
             try:
-                requests.post(job.results_callback, json=job.to_dict())
+                # requests.post(job.results_callback, json=job.to_dict())
+                log.info(f'Sending results for job \n{job.to_json(indent=2)}')
+                results_resp = requests.post(
+                    job.results_callback,
+                    json=dict(eval_key=job.eval_spec.eval_key,
+                              results=job.results))
+                if not results_resp.ok:
+                    log.error(
+                        f'Error posting results back to botleague: {results_resp}')
+                else:
+                    json_resp = results_resp.json(indent=2)
+                    log.success(f'Successfully posted to botleague! response:\n'
+                                f'{json_resp}')
             except Exception:
-                log.exception('Could not send results back to problem endpoint')
-
+                # TODO: Create an alert on this
+                log.exception('Could not send results back to problem endpoint.')
+            finally:
+                instance = self.instances_db.get(self.instance_id)
+                instance.status = constants.INSTANCE_STATUS_AVAILABLE
+                instance.time_last_available = SERVER_TIMESTAMP
+                self.instances_db.set(self.instance_id, instance)
+                log.success(f'Made instance {self.instance_id} available')
 
     @staticmethod
     def get_results(results_dir) -> dict:
@@ -326,8 +349,9 @@ class EvalWorker:
         url = f'https://storage.googleapis.com/{BOTLEAGUE_LOG_BUCKET}/{key}'
         return url
 
-    def stop_old_jobs_if_running(self):
+    def stop_old_containers_if_running(self):
         containers = self.docker.containers.list()
+
         def is_botleague(container):
             image_name = container.image.attrs['RepoTags'][0]
             if image_name.startswith('deepdriveio/deepdrive:problem_') or \
