@@ -236,7 +236,11 @@ class EvalWorker:
         if in_test():
             return
         else:
-            requests.post(job.results_callback, json=job.to_dict())
+            try:
+                requests.post(job.results_callback, json=job.to_dict())
+            except Exception:
+                log.exception('Could not send results back to problem endpoint')
+
 
     @staticmethod
     def get_results(results_dir) -> dict:
