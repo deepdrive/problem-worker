@@ -4,7 +4,7 @@ from botleague_helpers.db import get_db
 from box import Box
 
 import utils
-from problem_constants.constants import JOB_STATUS_TO_START, JOB_STATUS_FINISHED
+from problem_constants.constants import JOB_STATUS_FINISHED, JOB_STATUS_ASSIGNED
 from worker import EvalWorker
 
 
@@ -25,7 +25,7 @@ def test_worker(problem='problem-worker-test',
 
     test_job = Box({
         'results_callback': 'https://sim.deepdrive.io/results/domain_randomization',
-        'status': JOB_STATUS_TO_START,
+        'status': JOB_STATUS_ASSIGNED,
         'id': job_id,
         'instance_id': instance_id,
         'eval_spec': {

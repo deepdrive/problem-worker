@@ -1,6 +1,7 @@
 import json
 import os
 import os.path as p
+from datetime import datetime
 
 from box import Box
 
@@ -67,4 +68,9 @@ def generate_rand_alphanumeric(num_chars):
     import string
     alphabet = string.ascii_lowercase + string.digits
     ret = ''.join(choice(alphabet) for _ in range(num_chars))
+    return ret
+
+
+def get_sortable_time_string():
+    ret = datetime.utcnow().strftime('%Y-%m-%d_%I-%M-%S%p')
     return ret

@@ -18,8 +18,8 @@ from common import is_json, get_eval_jobs_db, fetch_instance_id, \
     get_eval_instances_db
 from problem_constants.constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
-    BOTLEAGUE_LOG_DIR, JOB_STATUS_TO_START, CONTAINER_RUN_OPTIONS, \
-    BOTLEAGUE_INNER_RESULTS_DIR_NAME
+    BOTLEAGUE_LOG_DIR, CONTAINER_RUN_OPTIONS, \
+    BOTLEAGUE_INNER_RESULTS_DIR_NAME, JOB_STATUS_ASSIGNED
 from logs import add_stackdriver_sink
 from utils import is_docker
 
@@ -56,7 +56,7 @@ class EvalWorker:
                 return
             job = self.check_for_jobs()
             if job:
-                if job.status == JOB_STATUS_TO_START:
+                if job.status == JOB_STATUS_ASSIGNED:
                     self.mark_job_running(job)
                     self.stop_old_jobs_if_running()
                     self.run_job(job)
@@ -81,7 +81,7 @@ class EvalWorker:
         #   mutex to avoid multiple threads processing the watch.
         job_query = self.jobs_db.collection.where(
             'instance_id', '==', self.instance_id).where(
-            'status', '==', JOB_STATUS_TO_START)
+            'status', '==', JOB_STATUS_ASSIGNED)
         jobs = list(job_query.stream())
         ret = Box()
         if len(jobs) > 1:
@@ -112,7 +112,10 @@ class EvalWorker:
         if not self.jobs_db.compare_and_swap(job.id, old_job, job):
             new_job = self.jobs_db.get(job.id)
             raise RuntimeError(f'Job status transaction failed, '
-                               f'expected {old_job}\ngot {new_job}')
+                               f'expected '
+                               f'{old_job.to_json(indent=2, sort_keys=True)}\n'
+                               f'got '
+                               f'{new_job.to_json(indent=2, sort_keys=True)}')
 
     def run_job(self, job):
         # TODO: Support N bot and N problem containers
