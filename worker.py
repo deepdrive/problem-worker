@@ -142,11 +142,9 @@ class EvalWorker:
         results = Box(
             logs=logs,
             errors=errors,
-
-            # We will eventually have many problem and bot containers to do
-            # things like fuzzing or A3C training etc...
-            problem_images=[problem_image.attrs],
-            bot_images=[bot_image.attrs],)
+            problem_docker_digest=problem_image.attrs['RepoDigests'][0],
+            bot_docker_digest=bot_image.attrs['RepoDigests'][0],
+        )
 
         containers = [problem_container_args]
         if not self.run_problem_only:
@@ -157,6 +155,7 @@ class EvalWorker:
             # Fetch results stored on the host by the problem container
             results.update(self.get_results(results_dir=results_mount))
         job.results = results
+
         self.send_results(job)
 
     def upload_all_container_logs(self, containers, errors, job, logs):
@@ -259,14 +258,16 @@ class EvalWorker:
                     log.success(f'Successfully posted to botleague! response:\n'
                                 f'{json_resp}')
             except Exception:
-                # TODO: Create an alert on this
+                # TODO: Create an alert on this log message
                 log.exception('Could not send results back to problem endpoint.')
             finally:
-                instance = self.instances_db.get(self.instance_id)
+                # TODO: Move this into problem-constants and rename
+                #  problem-helpers as it's shared with problem-worker
+                instance = self.instances_db.get(job.instance_id)
                 instance.status = constants.INSTANCE_STATUS_AVAILABLE
                 instance.time_last_available = SERVER_TIMESTAMP
-                self.instances_db.set(self.instance_id, instance)
-                log.success(f'Made instance {self.instance_id} available')
+                self.instances_db.set(job.instance_id, instance)
+                log.info(f'Made instance {job.instance_id} available')
 
     @staticmethod
     def get_results(results_dir) -> dict:
