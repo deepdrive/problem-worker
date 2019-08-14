@@ -8,7 +8,7 @@ from loguru import logger as log
 from botleague_helpers.config import in_test
 from botleague_helpers.db import get_db
 
-from constants import EVAL_JOBS_COLLECTION_NAME, METADATA_URL, \
+from problem_constants.constants import EVAL_JOBS_COLLECTION_NAME, METADATA_URL, \
     EVAL_INSTANCES_COLLECTION_NAME
 
 

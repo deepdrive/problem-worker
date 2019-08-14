@@ -9,5 +9,6 @@ pytest
 GitPython>=2.1.11
 ipython
 botleague-helpers>=0.1.0
+git+git://github.com/deepdrive/problem-constants#egg=problem-constants
 
 

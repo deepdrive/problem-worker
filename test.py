@@ -4,7 +4,7 @@ from botleague_helpers.db import get_db
 from box import Box
 
 import utils
-from constants import JOB_STATUS_TO_START, JOB_STATUS_FINISHED
+from problem_constants.constants import JOB_STATUS_TO_START, JOB_STATUS_FINISHED
 from worker import EvalWorker
 
 
