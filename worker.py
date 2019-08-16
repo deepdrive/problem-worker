@@ -254,12 +254,13 @@ class EvalWorker:
                     log.error(
                         f'Error posting results back to botleague: {results_resp}')
                 else:
-                    json_resp = results_resp.json(indent=2)
+                    json_resp = results_resp.json()
                     log.success(f'Successfully posted to botleague! response:\n'
-                                f'{json_resp}')
+                                f'{json.dumps(json_resp, indent=2)}')
             except Exception:
                 # TODO: Create an alert on this log message
-                log.exception('Could not send results back to problem endpoint.')
+                log.exception('Possible problem results back to '
+                              'problem endpoint.')
             finally:
                 # TODO: Move this into problem-constants and rename
                 #  problem-helpers as it's shared with problem-worker
