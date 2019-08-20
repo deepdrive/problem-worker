@@ -24,7 +24,7 @@ def test_worker(problem='problem-worker-test',
     job_id = 'TEST_JOB_' + utils.generate_rand_alphanumeric(32)
 
     test_job = Box({
-        'results_callback': 'https://sim.deepdrive.io/results/domain_randomization',
+        'botleague_liaison_host': 'https://liaison.botleague.io',
         'status': JOB_STATUS_ASSIGNED,
         'id': job_id,
         'instance_id': instance_id,

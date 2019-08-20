@@ -246,15 +246,15 @@ class EvalWorker:
             return
         else:
             try:
-                # requests.post(job.results_callback, json=job.to_dict())
                 log.info(f'Sending results for job \n{job.to_json(indent=2)}')
                 results_resp = requests.post(
-                    job.results_callback,
+                    f'{job.botleague_liaison_host}/results',
                     json=dict(eval_key=job.eval_spec.eval_key,
                               results=job.results))
                 if not results_resp.ok:
                     log.error(
-                        f'Error posting results back to botleague: {results_resp}')
+                        f'Error posting results back to botleague: '
+                        f'{results_resp}')
                 else:
                     json_resp = results_resp.json()
                     log.success(f'Successfully posted to botleague! response:\n'
