@@ -164,7 +164,9 @@ class EvalWorker:
             container_id = \
                 f'{image_name}_{container.short_id}'
             run_logs = container.logs().decode()
-            log.log('CONTAINER', run_logs)
+            log.debug('CONTAINER', f'{container_id} logs begin \n' + ('-' * 80))
+            log.debug('CONTAINER', run_logs)
+            log.debug('CONTAINER', f'{container_id} logs end \n' + ('-' * 80))
             exit_code = container.attrs['State']['ExitCode']
             if exit_code != 0:
                 errors[container_id] = f'Container failed with' \
