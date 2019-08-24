@@ -5,7 +5,7 @@ from box import Box
 
 import utils
 from problem_constants.constants import JOB_STATUS_FINISHED, JOB_STATUS_ASSIGNED
-from worker import EvalWorker
+from main import Worker
 
 
 def test_worker(problem='problem-worker-test',
@@ -30,7 +30,7 @@ def test_worker(problem='problem-worker-test',
         'instance_id': instance_id,
         'eval_spec': {
             'docker_tag': bot_tag,
-            'eval_id': job_id,
+            'eval_id': utils.generate_rand_alphanumeric(32),
             'eval_key': 'fake_eval_key',
             'seed': 1,
             'problem': problem,
@@ -38,7 +38,7 @@ def test_worker(problem='problem-worker-test',
 
     try:
         jobs_db.set(job_id, test_job)
-        worker = EvalWorker(jobs_db=jobs_db, run_problem_only=run_problem_only)
+        worker = Worker(jobs_db=jobs_db, run_problem_only=run_problem_only)
         job = worker.loop(max_iters=1)
         assert job
         assert job.id == job.eval_spec.eval_id
@@ -52,7 +52,7 @@ def test_worker(problem='problem-worker-test',
 
 
 def test_stop_old_jobs():
-    worker = EvalWorker()
+    worker = Worker()
     worker.stop_old_containers_if_running()
 
 

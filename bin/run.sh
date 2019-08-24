@@ -24,4 +24,4 @@ pip install -r requirements.txt
 # Always get the latest for our shared constants
 pip install --upgrade --force-reinstall --ignore-installed git+git://github.com/deepdrive/problem-constants#egg=problem-constants
 
-python -u worker.py
+python -u main.py

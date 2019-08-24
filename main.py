@@ -14,13 +14,16 @@ from loguru import logger as log
 from botleague_helpers.config import in_test
 
 from auto_updater import pull_latest, AutoUpdater
-from common import is_json, get_eval_jobs_db, fetch_instance_id, \
-    get_eval_instances_db
+from common import is_json, get_jobs_db, fetch_instance_id, \
+    get_worker_instances_db
 from problem_constants.constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
     BOTLEAGUE_LOG_DIR, CONTAINER_RUN_OPTIONS, \
-    BOTLEAGUE_INNER_RESULTS_DIR_NAME, JOB_STATUS_ASSIGNED
+    BOTLEAGUE_INNER_RESULTS_DIR_NAME, JOB_STATUS_ASSIGNED, JOB_TYPE_EVAL, \
+    JOB_TYPE_CI
 from problem_constants import constants
+
+from constants import SIM_IMAGE_BASE_TAG
 from logs import add_stackdriver_sink
 from utils import is_docker
 
@@ -37,15 +40,15 @@ def safe_box_update(box_to_update, **fields):
     return box_to_update
 
 
-class EvalWorker:
+class Worker:
     def __init__(self, jobs_db=None, instances_db=None, run_problem_only=False):
         self.instance_id, self.is_on_gcp = fetch_instance_id()
         self.docker = docker.from_env()
-        self.jobs_db = jobs_db or get_eval_jobs_db()
+        self.jobs_db = jobs_db or get_jobs_db()
 
         # Use this sparingly. Event loop should do most of the management
         # of instances so as to avoid race conditions.
-        self.instances_db = instances_db or get_eval_instances_db()
+        self.instances_db = instances_db or get_worker_instances_db()
 
         self.auto_updater = AutoUpdater(self.is_on_gcp)
         self.run_problem_only = run_problem_only
@@ -65,7 +68,10 @@ class EvalWorker:
             if job:
                 if job.status == JOB_STATUS_ASSIGNED:
                     self.mark_job_running(job)
-                    self.run_job(job)
+                    if job.job_type == JOB_TYPE_EVAL:
+                        self.run_eval_job(job)
+                    elif job.job_type == JOB_TYPE_CI:
+                        self.run_ci_job(job)
                     self.mark_job_finished(job)
 
             # TODO: Send heartbeat every minute? We'll be restarted after
@@ -123,7 +129,19 @@ class EvalWorker:
                                f'got '
                                f'{new_job.to_json(indent=2, sort_keys=True)}')
 
-    def run_job(self, job):
+    def run_ci_job(self, job):
+        sim_base_image = self.get_image(SIM_IMAGE_BASE_TAG)
+        container_args = dict(docker_tag=SIM_IMAGE_BASE_TAG)
+        containers, success = self.run_containers([container_args])
+        results = Box(
+            logs=Box(),
+            errors=Box(),
+            sim_base_docker_digest=sim_base_image.attrs['RepoDigests'][0],
+        )
+        self.set_container_logs_and_errors(containers, results, job)
+        job.results = results  # These are saved when the job is marked finished
+
+    def run_eval_job(self, job):
         # TODO: Support N bot and N problem containers
         eval_spec = job.eval_spec
 
@@ -137,28 +155,25 @@ class EvalWorker:
             problem_tag, eval_spec)
         bot_container_args = dict(docker_tag=bot_tag)
 
-        logs = Box()
-        errors = Box()
         results = Box(
-            logs=logs,
-            errors=errors,
+            logs=Box(),
+            errors=Box(),
             problem_docker_digest=problem_image.attrs['RepoDigests'][0],
-            bot_docker_digest=bot_image.attrs['RepoDigests'][0],
-        )
+            bot_docker_digest=bot_image.attrs['RepoDigests'][0],)
 
         containers = [problem_container_args]
         if not self.run_problem_only:
             containers.append(bot_container_args)
         containers, success = self.run_containers(containers)
-        self.upload_all_container_logs(containers, errors, job, logs)
+        self.set_container_logs_and_errors(containers, job, results)
         if success:
-            # Fetch results stored on the host by the problem container
+            # Fetch eval results stored on the host by the problem container
             results.update(self.get_results(results_dir=results_mount))
-        job.results = results
+        job.results = results  # These are saved when the job is marked finished
 
         self.send_results(job)
 
-    def upload_all_container_logs(self, containers, errors, job, logs):
+    def set_container_logs_and_errors(self, containers, job, results):
         for container in containers:
             image_name = container.attrs["Config"]["Image"]
             container_id = \
@@ -169,12 +184,15 @@ class EvalWorker:
             log.debug('CONTAINER', f'{container_id} logs end \n' + ('-' * 80))
             exit_code = container.attrs['State']['ExitCode']
             if exit_code != 0:
-                errors[container_id] = f'Container failed with' \
+                results.errors[container_id] = f'Container failed with' \
                     f' exit code {exit_code}'
+            elif container.status == 'dead':
+                results.errors[container_id] = f'Container died, please retry.'
+
             log_url = self.upload_logs(
                 run_logs, filename=f'{image_name}_job-{job.id}.txt')
             log.info(f'Uploaded logs for {container_id} to {log_url}')
-            logs[container_id] = log_url
+            results.logs[container_id] = log_url
 
     def get_image(self, tag):
         log.info('Pulling docker image %s...' % tag)
@@ -284,14 +302,15 @@ class EvalWorker:
                 f'No results file found at {BOTLEAGUE_RESULTS_FILEPATH}'
         return results
 
-    def run_containers(self, containers: list = None):
-        log.info('Running containers %s...' % containers)
-        containers = [self.start_container(**c) for c in containers]
+    def run_containers(self, containers_args: list = None):
+        log.info('Running containers %s...' % containers_args)
+        containers = [self.start_container(**c) for c in containers_args]
         try:
             containers, success = self.monitor_containers(containers)
         except Exception as e:
-            log.error('Exception encountered while running, '
-                      'stopping all containers')
+            log.error(f'Exception encountered while running '
+                      f'containers: {containers.to_json(indent=2)}, '
+                      'stopping all containers.')
             for container in containers:
                 log.error(f'Stopping orphaned container: {container}')
                 container.stop(timeout=1)
@@ -310,6 +329,9 @@ class EvalWorker:
 
             running = [c for c in containers if c.status in
                        ['created', 'running']]
+
+            # TODO: Do a container.logs(since=last, timestamps=True) and
+            #   log those in real time.
 
             # TODO: For N bots or N problems, we probably want to make a best
             #  effort so long as at least 1 bot and one problem are still alive.
@@ -369,7 +391,7 @@ class EvalWorker:
 
 
 def main():
-    worker = EvalWorker()
+    worker = Worker()
     worker.loop()
 
 
