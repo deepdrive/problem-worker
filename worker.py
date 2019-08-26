@@ -290,8 +290,9 @@ class EvalWorker:
         try:
             containers, success = self.monitor_containers(containers)
         except Exception as e:
-            log.error('Exception encountered while running, '
-                      'stopping all containers')
+            log.error(f'Exception encountered while running '
+                      f'containers: {containers.to_json(indent=2)}, '
+                      'stopping all containers.')
             for container in containers:
                 log.error(f'Stopping orphaned container: {container}')
                 container.stop(timeout=1)
