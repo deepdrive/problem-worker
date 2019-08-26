@@ -30,6 +30,8 @@ from problem_constants.constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED,
     BOTLEAGUE_INNER_RESULTS_DIR_NAME, JOB_STATUS_ASSIGNED, JOB_TYPE_EVAL, \
     JOB_TYPE_SIM_BUILD
 from problem_constants import constants
+
+from constants import SIM_IMAGE_BASE_TAG, DOCKERHUB_PASSWORD, DOCKERHUB_USERNAME
 from logs import add_stackdriver_sink
 from utils import is_docker
 
@@ -217,7 +219,14 @@ class Worker:
 
     def get_image(self, tag):
         log.info('Pulling docker image %s...' % tag)
-        result = self.docker.images.pull(tag)
+        try:
+            result = self.docker.images.pull(tag)
+        except docker.errors.ImageNotFound:
+            # lazy login
+            self.docker.login(username=DOCKERHUB_USERNAME,
+                              password=DOCKERHUB_PASSWORD)
+            result = self.docker.images.pull(tag)
+
         log.info('Finished pulling docker image %s' % tag)
         if isinstance(result, list):
             ret = self.get_latest_docker_image(result)
