@@ -35,7 +35,7 @@ from constants import SIM_IMAGE_BASE_TAG, DOCKERHUB_PASSWORD, DOCKERHUB_USERNAME
 from logs import add_stackdriver_sink
 from utils import is_docker
 
-container_run_level = log.level("CONTAINER", no=20, color="<magenta>")
+container_run_level = log.level('CONTAINER', no=10, color='<magenta>')
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
