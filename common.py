@@ -8,8 +8,8 @@ from loguru import logger as log
 from botleague_helpers.config import in_test
 from botleague_helpers.db import get_db
 
-from problem_constants.constants import EVAL_JOBS_COLLECTION_NAME, METADATA_URL, \
-    EVAL_INSTANCES_COLLECTION_NAME
+from problem_constants.constants import JOBS_COLLECTION_NAME, METADATA_URL, \
+    WORKER_INSTANCES_COLLECTION_NAME
 
 
 def is_json(string: str):
@@ -20,7 +20,7 @@ def is_json(string: str):
     return True
 
 
-def get_eval_jobs_db():
+def get_jobs_db():
     return get_db(
         EVAL_JOBS_COLLECTION_NAME,
         use_boxes=True,
