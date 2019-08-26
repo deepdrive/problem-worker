@@ -1,5 +1,13 @@
 import json
 import os
+from typing import Optional
+
+import re
+
+from botleague_helpers.crypto import decrypt_symmetric, encrypt_db_key
+from botleague_helpers.db import get_db
+from datetime import datetime
+
 import time
 from copy import deepcopy
 from random import random
@@ -50,6 +58,10 @@ class EvalWorker:
         self.auto_updater = AutoUpdater(self.is_on_gcp)
         self.run_problem_only = run_problem_only
         add_stackdriver_sink(log, self.instance_id)
+
+    @staticmethod
+    def get_ci_aws_creds():
+        return decrypt_symmetric(get_db('secrets').get('DEEPDRIVE_AWS_CREDS'))
 
     def loop(self, max_iters=None):
         iters = 0
@@ -421,8 +433,9 @@ def main():
 
 
 def play():
-    add_stackdriver_sink(log, instance_id='asdf')
-    log.error('asdfasdf')
+    encrypt_db_key(get_db('botleague_liaison'), 'BOTLEAGUE_RESULTS_GITHUB_TOKEN')
+    # add_stackdriver_sink(log, instance_id='asdf')
+    # log.error('asdfasdf')
     # worker = EvalWorker()
     # local_results_dir = f'{DIR}/botleague_results'
     # os.makedirs(local_results_dir, exist_ok=True)

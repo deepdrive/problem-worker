@@ -4,6 +4,7 @@ python-box
 google-cloud-storage>=1.15.0
 google-auth>=1.6.3
 google-cloud-logging
+google-cloud-kms
 loguru
 pytest
 GitPython>=2.1.11
