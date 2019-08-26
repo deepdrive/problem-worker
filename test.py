@@ -30,7 +30,7 @@ def test_worker(problem='problem-worker-test',
         'instance_id': instance_id,
         'eval_spec': {
             'docker_tag': bot_tag,
-            'eval_id': job_id,
+            'eval_id': utils.generate_rand_alphanumeric(32),
             'eval_key': 'fake_eval_key',
             'seed': 1,
             'problem': problem,
