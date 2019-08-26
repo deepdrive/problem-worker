@@ -22,18 +22,17 @@ def is_json(string: str):
 
 def get_jobs_db():
     return get_db(
-        EVAL_JOBS_COLLECTION_NAME,
-        use_boxes=True,
+        JOBS_COLLECTION_NAME,
         force_firestore_db=should_force_firestore_db()
     )
 
 
-def get_eval_instances_db():
+def get_worker_instances_db():
     return get_db(
-        EVAL_INSTANCES_COLLECTION_NAME,
-        use_boxes=True,
+        WORKER_INSTANCES_COLLECTION_NAME,
         force_firestore_db=should_force_firestore_db()
     )
+
 
 def fetch_instance_id() -> Tuple[str, bool]:
     if in_test() or 'INSTANCE_ID' in os.environ:
