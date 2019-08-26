@@ -312,6 +312,42 @@ class EvalWorker:
             running = [c for c in containers if c.status in
                        ['created', 'running']]
 
+            for container_idx, container in enumerate(containers):
+                last_timestamp = last_timestamps[container_idx]
+                if last_timestamp is None:
+                    log_lines = container.logs(timestamps=True).decode()
+                    log_lines = re.split('\n', log_lines.strip())
+                    try:
+                        last_timestamp = self.get_last_timestamp(log_lines)
+                    except:
+                        last_timestamp = None
+                else:
+                    log_lines = container.\
+                        logs(timestamps=True, since=last_timestamp).decode()
+                    log_lines = re.split('\n', log_lines.strip())
+                    last_logline = last_loglines[container_idx]
+                    if last_logline is not None:
+                        try:
+                            dupe_index = log_lines.index(last_logline)
+                            log_lines = log_lines[dupe_index+1:]
+                        except ValueError:
+                            pass
+
+                    last_timestamp = (self.get_last_timestamp(log_lines) or
+                                      last_timestamp)
+
+                last_logline = None
+                for line in log_lines:
+                    if line:
+                        log.log('CONTAINER', line) if line else None
+                        last_logline = line
+
+                last_timestamps[container_idx] = last_timestamp
+                last_loglines[container_idx] = last_logline
+
+            # TODO: Do a container.logs(since=last, timestamps=True) and
+            #   log those in real time.
+
             # TODO: For N bots or N problems, we probably want to make a best
             #  effort so long as at least 1 bot and one problem are still alive.
             dead = [c for c in containers if c.status == 'dead']
@@ -331,6 +367,16 @@ class EvalWorker:
             container.stop(timeout=1)
         log.info('Finished running containers %s' % containers)
         return containers, success
+
+    @staticmethod
+    def get_last_timestamp(logs) -> Optional[datetime]:
+        if not (logs and logs[0]):
+            return None
+        last_timestamp = \
+            logs[-1].split(' ')[0]
+        last_timestamp = datetime.strptime(last_timestamp[:-4],
+                                           '%Y-%m-%dT%H:%M:%S.%f')
+        return last_timestamp
 
     def start_container(self, docker_tag, cmd=None, env=None, volumes=None):
         container = self.docker.containers.run(docker_tag, command=cmd,
