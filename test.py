@@ -61,7 +61,9 @@ def test_stop_old_jobs():
 
 if __name__ == '__main__':
     # test_worker('deepdriveio/deepdrive:bot_domain_randomization')
+    log.success('RUNNING INTEGRATION TEST...')
     test_worker('domain_randomization',
                 bot_tag='deepdriveio/deepdrive:bot_domain_randomization')
+    log.success('INTEGRATION TEST RAN SUCCESSFULLY!')
     # test_worker(problem='problem-worker-test', run_problem_only=True)
     # test_stop_old_jobs()
