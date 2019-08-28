@@ -54,3 +54,6 @@ Note that from now on, the source will be automatically updated with the
 auto_updater using git. There's no need to rebuild the container even if 
 the python dependencies change (since we install requirements.txt on start
 and will restart if requirements.txt changes).
+
+If you do need to update the container, you'll have to bake a new VM image
+and reference that image in problem-coordinator.
