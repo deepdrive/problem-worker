@@ -9,5 +9,7 @@ loguru
 pytest
 GitPython>=2.1.11
 ipython
+git+git://github.com/botleague/botleague-helpers#egg=botleague-helpers
+git+git://github.com/deepdrive/problem-constants#egg=problem-constants
 
 

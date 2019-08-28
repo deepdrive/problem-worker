@@ -9,6 +9,7 @@ build:
 	docker build -t $(TAG) .
 
 push:
+	echo Pusing docker container. Note that workers will not use the latest docker container unless they are restarted.
 	docker push $(TAG)
 
 test: build
@@ -30,4 +31,5 @@ bash:
 	docker run $(RUN_ARGS) -it $(TAG) bash
 
 deploy: test push
+	echo Pusing to git so that workers will update automatically once their current job is complete
 	git push origin production
