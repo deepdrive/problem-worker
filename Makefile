@@ -30,6 +30,11 @@ test:
 bash:
 	docker run $(RUN_ARGS) -it $(TAG) bash
 
-deploy: test push
+deploy: test push just_deploy
+
+just_deploy:
 	echo Pusing to git so that workers will update automatically once their current job is complete
+	echo Press enter if you have commited the changes you want to deploy, otherwise press Ctrl+C
+	read dontcare
 	git push origin production
+	echo Deployed!
