@@ -25,6 +25,7 @@ devrun:
 	docker run $(RUN_ARGS_DEV) -it $(TAG)
 
 test:
+	echo RUNNING TESTS --------------------------------------------------------
 	docker run $(RUN_ARGS_DEV) -it $(TAG) python test.py
 
 bash:
