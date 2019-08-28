@@ -451,24 +451,24 @@ class Worker:
         return url
 
 
-def stop_old_containers_if_running(self):
-        containers = self.docker.containers.list()
+    def stop_old_containers_if_running(self):
+            containers = self.docker.containers.list()
 
-        def is_botleague(container):
-            tags = container.image.attrs['RepoTags']
-            if tags:
-                image_name = tags[0]
-                if (
-                    image_name.startswith('deepdriveio/deepdrive:problem_') or
-                    image_name.startswith('deepdriveio/deepdrive:bot_') or
-                    image_name == 'deepdriveio/private:deepdrive-sim-package'
-                ):
-                    return True
-            return False
+            def is_botleague(container):
+                tags = container.image.attrs['RepoTags']
+                if tags:
+                    image_name = tags[0]
+                    if (
+                        image_name.startswith('deepdriveio/deepdrive:problem_') or
+                        image_name.startswith('deepdriveio/deepdrive:bot_') or
+                        image_name == 'deepdriveio/private:deepdrive-sim-package'
+                    ):
+                        return True
+                return False
 
-        for container in containers:
-            if container.status == 'running' and is_botleague(container):
-                container.stop()
+            for container in containers:
+                if container.status == 'running' and is_botleague(container):
+                    container.stop()
 
 
 def main():
