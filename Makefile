@@ -28,3 +28,6 @@ test:
 
 bash:
 	docker run $(RUN_ARGS) -it $(TAG) bash
+
+deploy:
+	git push origin production
