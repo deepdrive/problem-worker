@@ -1,5 +1,7 @@
 import os
 
+from loguru import logger as log
+
 from botleague_helpers.db import get_db
 from box import Box
 
