@@ -23,5 +23,6 @@ pip install -r requirements.txt
 
 # Always get the latest for our shared constants
 pip install --upgrade --force-reinstall --ignore-installed git+git://github.com/deepdrive/problem-constants#egg=problem-constants
+pip install --upgrade --force-reinstall --ignore-installed git+git://github.com/deepdrive/botleague-helpers#egg=botleague-helpers
 
 python -u worker.py
