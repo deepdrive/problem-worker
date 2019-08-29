@@ -34,6 +34,12 @@ def get_worker_instances_db():
     )
 
 
+def get_secrets_db():
+    return get_db(
+        'secrets',
+        force_firestore_db=should_force_firestore_db()
+    )
+
 def fetch_instance_id() -> Tuple[str, bool]:
     if in_test() or 'INSTANCE_ID' in os.environ:
         ret = os.environ['INSTANCE_ID']

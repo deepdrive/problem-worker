@@ -23,8 +23,9 @@ from botleague_helpers.config import in_test
 
 from auto_updater import pull_latest, AutoUpdater
 from common import is_json, get_jobs_db, fetch_instance_id, \
-    get_worker_instances_db
-from problem_constants.constants import JOB_STATUS_RUNNING, JOB_STATUS_FINISHED, \
+    get_worker_instances_db, get_secrets_db
+from problem_constants.constants import JOB_STATUS_RUNNING, \
+    JOB_STATUS_FINISHED, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
     BOTLEAGUE_LOG_DIR, CONTAINER_RUN_OPTIONS, \
     BOTLEAGUE_INNER_RESULTS_DIR_NAME, JOB_STATUS_ASSIGNED, JOB_TYPE_EVAL, \
