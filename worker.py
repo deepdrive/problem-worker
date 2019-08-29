@@ -4,7 +4,7 @@ from typing import Optional
 
 import re
 
-from botleague_helpers.crypto import decrypt_symmetric, encrypt_db_key
+from botleague_helpers.crypto import decrypt_symmetric
 from botleague_helpers.db import get_db
 from datetime import datetime
 
@@ -14,14 +14,14 @@ from random import random
 
 import requests
 import docker
-from box import Box, BoxList
+from box import Box
 from docker.models.images import Image
 from google.cloud.firestore_v1 import SERVER_TIMESTAMP
 from loguru import logger as log
 
 from botleague_helpers.config import in_test
 
-from auto_updater import pull_latest, AutoUpdater
+from auto_updater import AutoUpdater
 from common import is_json, get_jobs_db, fetch_instance_id, \
     get_worker_instances_db, get_secrets_db
 from problem_constants.constants import JOB_STATUS_RUNNING, \
