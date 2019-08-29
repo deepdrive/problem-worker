@@ -32,7 +32,7 @@ from problem_constants.constants import JOB_STATUS_RUNNING, \
     JOB_TYPE_SIM_BUILD
 from problem_constants import constants
 
-from constants import SIM_IMAGE_BASE_TAG, DOCKERHUB_PASSWORD, DOCKERHUB_USERNAME
+from constants import SIM_IMAGE_BASE_TAG
 from logs import add_stackdriver_sink
 from utils import is_docker
 
