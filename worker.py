@@ -83,12 +83,16 @@ class Worker:
             job = self.check_for_jobs()
             if job:
                 if job.status == JOB_STATUS_ASSIGNED:
+                    log.success(f'Running job: '
+                                f'{job.to_json(indent=2, default=str)}')
                     self.mark_job_running(job)
                     if job.job_type == JOB_TYPE_EVAL:
                         self.run_eval_job(job)
                     elif job.job_type == JOB_TYPE_SIM_BUILD:
                         self.run_ci_job(job)
                     self.mark_job_finished(job)
+                    log.success(f'Finished job: '
+                                f'{job.to_json(indent=2, default=str)}')
 
             # TODO: Send heartbeat every minute? We'll be restarted after
             #  and idle or job timeout, so not that big of a deal.
