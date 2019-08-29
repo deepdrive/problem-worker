@@ -143,8 +143,13 @@ class Worker:
                                f'{new_job.to_json(indent=2, sort_keys=True)}')
 
     def run_ci_job(self, job):
-        sim_base_image = self.get_image(SIM_IMAGE_BASE_TAG)
-        aws_creds = get_db('secrets').get('DEEPDRIVE_AWS_CREDS_encrypted')
+        secrets = get_secrets_db()
+        docker_creds = secrets.get('DEEPDRIVE_DOCKER_CREDS_encrypted')
+        docker_username = decrypt_symmetric(docker_creds['username'])
+        docker_password = decrypt_symmetric(docker_creds['password'])
+        sim_base_image = self.get_image(SIM_IMAGE_BASE_TAG, docker_username,
+                                        docker_password)
+        aws_creds = secrets.get('DEEPDRIVE_AWS_CREDS_encrypted')
         aws_key_id = decrypt_symmetric(aws_creds['AWS_ACCESS_KEY_ID'])
         aws_secret = decrypt_symmetric(aws_creds['AWS_SECRET_ACCESS_KEY'])
         container_args = dict(docker_tag=SIM_IMAGE_BASE_TAG,
@@ -368,6 +373,7 @@ class Worker:
                 if last_timestamp is None:
                     log_lines = container.logs(timestamps=True).decode()
                     log_lines = re.split('\n', log_lines.strip())
+                    # noinspection PyPep8
                     try:
                         last_timestamp = self.get_last_timestamp(log_lines)
                     except:
