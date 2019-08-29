@@ -47,13 +47,14 @@ restart if it dies.
 c.f. [docker restart](https://docs.docker.com/engine/reference/run/#restart-policies---restart)
 
 Now stop the instance (leave the container running so it restarts) 
-and create an image to fully bake your new eval VM!
+and create an image to fully bake your new eval VM! You can do this in the UI
+under images using the disk you pulled the image onto as the source disk.
 
 
 Note that from now on, the source will be automatically updated with the 
 auto_updater using git. There's no need to rebuild the container even if 
-the python dependencies change (since we install requirements.txt on start
-and will restart if requirements.txt changes).
+the python dependencies change (since we install requirements.txt and git pull
+latest on start and will restart if requirements.txt changes).
 
 If you do need to update the container, you'll have to bake a new VM image
-and reference that image in problem-coordinator.
+and reference that image in problem-coordinator `worker_instance_create.json`.
