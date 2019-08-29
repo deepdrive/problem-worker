@@ -1,5 +1,5 @@
-#  docker build -t deepdriveio/deepdrive:problem_problem-worker-test -f TestDockerfile .
+# docker build -t deepdriveio/deepdrive:problem_problem-worker-test -f TestDockerfile .
+# docker push deepdriveio/deepdrive:problem_problem-worker-test
 
 FROM python:3.7
-RUN mkdir /mnt/botleague_results
-CMD ls -la /mnt/.gcpcreds && echo '{"yoyoyo": "asdfasdf"}' | tee /mnt/botleague_results/results.json
+CMD mkdir -p /mnt/botleague_results/latest && ls -la /mnt/botleague_results && echo '{"yoyoyo": "asdfasdf"}' | tee /mnt/botleague_results/latest/results.json
