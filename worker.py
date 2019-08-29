@@ -51,6 +51,12 @@ def safe_box_update(box_to_update, **fields):
 
 class Worker:
     def __init__(self, jobs_db=None, instances_db=None, run_problem_only=False):
+        """
+        :param jobs_db: Job status, etc... in Firestore
+        :param instances_db: Instance status, etc... in Firestore
+        :param run_problem_only: If True, will not run the bot container. This
+            is not relevant to sim-build jobs.
+        """
         self.instance_id, self.is_on_gcp = fetch_instance_id()
         self.docker = docker.from_env()
         self.jobs_db = jobs_db or get_jobs_db()
