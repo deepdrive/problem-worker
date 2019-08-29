@@ -61,6 +61,7 @@ class Worker:
 
         self.auto_updater = AutoUpdater(self.is_on_gcp)
         self.run_problem_only = run_problem_only
+        self.loggedin_to_docker = False
         add_stackdriver_sink(log, self.instance_id)
 
     @staticmethod
@@ -223,16 +224,14 @@ class Worker:
             log.info(f'Uploaded logs for {container_id} to {log_url}')
             results.logs[container_id] = log_url
 
-    def get_image(self, tag):
+    def get_image(self, tag, dockerhub_username=None, dockerhub_password=None):
         log.info('Pulling docker image %s...' % tag)
-        try:
-            result = self.docker.images.pull(tag)
-        except docker.errors.ImageNotFound:
-            # lazy login
-            self.docker.login(username=DOCKERHUB_USERNAME,
-                              password=DOCKERHUB_PASSWORD)
-            result = self.docker.images.pull(tag)
+        if dockerhub_username is not None and not self.loggedin_to_docker:
+            self.docker.login(username=dockerhub_username,
+                              password=dockerhub_password)
+            self.loggedin_to_docker = True
 
+        result = self.docker.images.pull(tag)
         log.info('Finished pulling docker image %s' % tag)
         if isinstance(result, list):
             ret = self.get_latest_docker_image(result)
