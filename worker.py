@@ -483,29 +483,8 @@ def main():
 
 
 def play():
-    encrypt_db_key(get_db('botleague_liaison'), 'BOTLEAGUE_RESULTS_GITHUB_TOKEN')
-    # add_stackdriver_sink(log, instance_id='asdf')
-    # log.error('asdfasdf')
-    # worker = EvalWorker()
-    # local_results_dir = f'{DIR}/botleague_results'
-    # os.makedirs(local_results_dir, exist_ok=True)
-    # container = worker.run_container(
-    #     'python:3.7',
-    #     cmd='bash -c "echo {} > /mnt/botleague/results.json"',
-    #     volumes={local_results_dir: {'bind': '/mnt/botleague', 'mode': 'rw'}},)
-    # results = open(f'{local_results_dir}/results.json').read()
-    # print(results)
-    # image = worker.docker.images.get(
-    #     '14a2caeca3271219d4aca13d0e9daafd4553fe2f990179a66d8932e5afce805f')
-    # image.tag('qwer')
-    # asdf = worker.get_file_from_stopped_container(
-    #     container, filename='/mnt/botleague/results.json')
-    # print(asdf)
-    # print(container.logs().decode())
-    # log.info(container2.run('cat ~/.bashrc').decode())
-    # log.info(container2.logs())
-
     pass
+    # encrypt_db_key(get_db('secrets'), 'DEEPDRIVE_DOCKER_CREDS')
 
 
 if __name__ == '__main__':
