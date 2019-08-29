@@ -371,6 +371,8 @@ class Worker:
                     try:
                         last_timestamp = self.get_last_timestamp(log_lines)
                     except:
+                        log.warning(f'Could not get timestamp from logs '
+                                    f'{log_lines}')
                         last_timestamp = None
                 else:
                     log_lines = container.\
@@ -379,6 +381,7 @@ class Worker:
                     last_logline = last_loglines[container_idx]
                     if last_logline is not None:
                         try:
+                            # noinspection PyTypeChecker
                             dupe_index = log_lines.index(last_logline)
                             log_lines = log_lines[dupe_index+1:]
                         except ValueError:
@@ -387,12 +390,9 @@ class Worker:
                     last_timestamp = (self.get_last_timestamp(log_lines) or
                                       last_timestamp)
 
-                last_logline = None
-                for line in log_lines:
-                    if line:
-                        log.log('CONTAINER', line) if line else None
-                        last_logline = line
-
+                if log_lines:
+                    last_loglines[container_idx] = log_lines[-1]
+                    log.log('CONTAINER', '\n'.join(log_lines))
                 last_timestamps[container_idx] = last_timestamp
                 last_loglines[container_idx] = last_logline
 
