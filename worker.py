@@ -64,10 +64,6 @@ class Worker:
         self.loggedin_to_docker = False
         add_stackdriver_sink(log, self.instance_id)
 
-    @staticmethod
-    def get_ci_aws_creds():
-        return decrypt_symmetric(get_db('secrets').get('DEEPDRIVE_AWS_CREDS'))
-
     def loop(self, max_iters=None):
         iters = 0
         log.info('Worker started, checking for jobs...')
