@@ -401,7 +401,6 @@ class Worker:
                     last_loglines[container_idx] = log_lines[-1]
                     log.log('CONTAINER', '\n'.join(log_lines))
                 last_timestamps[container_idx] = last_timestamp
-                last_loglines[container_idx] = last_logline
 
             # TODO: Do a container.logs(since=last, timestamps=True) and
             #   log those in real time.
