@@ -374,6 +374,8 @@ class Worker:
                        ['created', 'running']]
 
             for container_idx, container in enumerate(containers):
+                # TODO: logger.add("special.log", level='CONTAINER')
+                #  then use frontail to stream it from the server
                 last_timestamp = last_timestamps[container_idx]
                 if last_timestamp is None:
                     log_lines = container.logs(timestamps=True).decode()
