@@ -149,7 +149,7 @@ class Worker:
                                f'got '
                                f'{new_job.to_json(indent=2, sort_keys=True)}')
 
-    def run_ci_job(self, job):
+    def run_build_job(self, job):
         secrets = get_secrets_db()
         docker_creds = secrets.get('DEEPDRIVE_DOCKER_CREDS_encrypted')
         docker_username = decrypt_symmetric(docker_creds['username'])
