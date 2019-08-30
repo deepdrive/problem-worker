@@ -89,7 +89,8 @@ class Worker:
                     if job.job_type == JOB_TYPE_EVAL:
                         self.run_eval_job(job)
                     elif job.job_type == JOB_TYPE_SIM_BUILD:
-                        self.run_ci_job(job)
+                        self.run_build_job(job)
+                    self.make_instance_available(job.instance_id)
                     self.mark_job_finished(job)
                     log.success(f'Finished job: '
                                 f'{job.to_json(indent=2, default=str)}')
@@ -107,6 +108,18 @@ class Worker:
 
             # Sleep with random splay to avoid thundering herd
             time.sleep(0.5 + random())
+
+    def make_instance_available(self, instance_id):
+        # TODO: Move this into problem-constants and rename
+        #  problem-helpers as it's shared with problem-worker
+        instance = self.instances_db.get(instance_id)
+        if instance.status != constants.INSTANCE_STATUS_AVAILABLE:
+            instance.status = constants.INSTANCE_STATUS_AVAILABLE
+            instance.time_last_available = SERVER_TIMESTAMP
+            self.instances_db.set(instance_id, instance)
+            log.info(f'Made instance {instance_id} available')
+        else:
+            log.warning(f'Instance {instance_id} already available')
 
     def check_for_jobs(self) -> Box:
         # TODO: Avoid polling by creating a Firestore watch and using a
@@ -300,7 +313,8 @@ class Worker:
         log.info(f'results mount {results_mount}')
         return results_mount
 
-    def send_results(self, job):
+    @staticmethod
+    def send_results(job):
         if in_test():
             return
         else:
@@ -322,14 +336,6 @@ class Worker:
                 # TODO: Create an alert on this log message
                 log.exception('Possible problem results back to '
                               'problem endpoint.')
-            finally:
-                # TODO: Move this into problem-constants and rename
-                #  problem-helpers as it's shared with problem-worker
-                instance = self.instances_db.get(job.instance_id)
-                instance.status = constants.INSTANCE_STATUS_AVAILABLE
-                instance.time_last_available = SERVER_TIMESTAMP
-                self.instances_db.set(job.instance_id, instance)
-                log.info(f'Made instance {job.instance_id} available')
 
     @staticmethod
     def get_results(results_dir) -> dict:
