@@ -156,11 +156,12 @@ class Worker:
         job = safe_box_update(job, **fields)
         if not self.jobs_db.compare_and_swap(job.id, old_job, job):
             new_job = self.jobs_db.get(job.id)
-            raise RuntimeError(f'Job status transaction failed, '
-                               f'expected '
-                               f'{old_job.to_json(indent=2, sort_keys=True)}\n'
-                               f'got '
-                               f'{new_job.to_json(indent=2, sort_keys=True)}')
+            raise RuntimeError(
+                f'Job status transaction failed, '
+                f'expected '
+                f'{old_job.to_json(indent=2, sort_keys=True, default=str)}\n'
+                f'got '
+                f'{new_job.to_json(indent=2, sort_keys=True, default=str)}')
 
     def run_build_job(self, job):
         secrets = get_secrets_db()
@@ -319,7 +320,8 @@ class Worker:
             return
         else:
             try:
-                log.info(f'Sending results for job \n{job.to_json(indent=2)}')
+                log.info(f'Sending results for job \n'
+                         f'{job.to_json(indent=2, default=str)}')
                 results_resp = requests.post(
                     f'{job.botleague_liaison_host}/results',
                     json=dict(eval_key=job.eval_spec.eval_key,
@@ -356,7 +358,8 @@ class Worker:
             containers, success = self.monitor_containers(containers)
         except Exception as e:
             log.error(f'Exception encountered while running '
-                      f'containers: {containers.to_json(indent=2)}, '
+                      f'containers: '
+                      f'{containers.to_json(indent=2, default=str)}, '
                       'stopping all containers.')
             for container in containers:
                 log.error(f'Stopping orphaned container: {container}')
