@@ -36,7 +36,7 @@ from problem_constants import constants
 
 from constants import SIM_IMAGE_BASE_TAG
 from logs import add_stackdriver_sink
-from utils import is_docker
+from utils import is_docker, dbox
 
 container_run_level = log.level('CONTAINER', no=10, color='<magenta>')
 
@@ -112,7 +112,7 @@ class Worker:
                 self.run_build_job(job)
         except Exception:
             self.handle_job_exception(job)
-        self.make_instance_available(job.instance_id)
+        self.make_instance_available(self.instances_db, job.instance_id)
         self.mark_job_finished(job)
         log.success(f'Finished job: '
                     f'{job.to_json(indent=2, default=str)}')
@@ -132,14 +132,15 @@ class Worker:
         # TODO: Some form of retry if it's a network or other
         #   transient error
 
-    def make_instance_available(self, instance_id):
+    @staticmethod
+    def make_instance_available(instances_db, instance_id):
         # TODO: Move this into problem-constants and rename
         #  problem-helpers as it's shared with problem-worker
-        instance = self.instances_db.get(instance_id)
+        instance = dbox(instances_db.get(instance_id))
         if instance.status != constants.INSTANCE_STATUS_AVAILABLE:
             instance.status = constants.INSTANCE_STATUS_AVAILABLE
             instance.time_last_available = SERVER_TIMESTAMP
-            self.instances_db.set(instance_id, instance)
+            instances_db.set(instance_id, instance)
             log.info(f'Made instance {instance_id} available')
         else:
             log.warning(f'Instance {instance_id} already available')

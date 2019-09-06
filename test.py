@@ -9,6 +9,8 @@ from box import Box
 import utils
 from problem_constants.constants import JOB_STATUS_FINISHED, \
     JOB_STATUS_ASSIGNED, JOB_TYPE_EVAL, JOB_TYPE_SIM_BUILD
+
+from common import get_worker_instances_db
 from worker import Worker
 
 
@@ -23,6 +25,9 @@ def test_build_sim():
 def get_test_job(job_type) -> Box:
     os.environ['FORCE_FIRESTORE_DB'] = '1'
     instance_id = '9999999999999999999'
+    inst_db = get_worker_instances_db()
+    Worker.make_instance_available(instances_db=inst_db,
+                                   instance_id=instance_id)
     os.environ['INSTANCE_ID'] = instance_id
     job_id = 'TEST_JOB_' + utils.generate_rand_alphanumeric(32)
     test_job = Box({

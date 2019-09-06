@@ -74,3 +74,7 @@ def generate_rand_alphanumeric(num_chars):
 def get_sortable_time_string():
     ret = datetime.utcnow().strftime('%Y-%m-%d_%I-%M-%S%p')
     return ret
+
+
+def dbox(obj):
+    return Box(obj, default_box=True)
