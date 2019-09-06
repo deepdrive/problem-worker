@@ -34,8 +34,8 @@ bash:
 deploy: test push just_deploy
 
 just_deploy:
-	echo Pusing to git so that workers will update automatically once their current job is complete
+	echo Pushing to git so that workers will update automatically once their current job is complete
 	echo Press enter if you have commited the changes you want to deploy, otherwise press Ctrl+C
 	read whatsayyou
-	git push origin production
+	git push origin master:production
 	echo Deployed!
