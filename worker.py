@@ -1,5 +1,7 @@
 import json
 import os
+import sys
+from io import StringIO
 from typing import Optional
 
 import re
@@ -82,18 +84,7 @@ class Worker:
             self.stop_old_containers_if_running()
             job = self.check_for_jobs()
             if job:
-                if job.status == JOB_STATUS_ASSIGNED:
-                    log.success(f'Running job: '
-                                f'{job.to_json(indent=2, default=str)}')
-                    self.mark_job_running(job)
-                    if job.job_type == JOB_TYPE_EVAL:
-                        self.run_eval_job(job)
-                    elif job.job_type == JOB_TYPE_SIM_BUILD:
-                        self.run_build_job(job)
-                    self.make_instance_available(job.instance_id)
-                    self.mark_job_finished(job)
-                    log.success(f'Finished job: '
-                                f'{job.to_json(indent=2, default=str)}')
+                self.run_job(job)
 
             # TODO: Send heartbeat every minute? We'll be restarted after
             #  and idle or job timeout, so not that big of a deal.
@@ -108,6 +99,38 @@ class Worker:
 
             # Sleep with random splay to avoid thundering herd
             time.sleep(0.5 + random())
+
+    def run_job(self, job):
+        log.success(f'Running job: '
+                    f'{job.to_json(indent=2, default=str)}')
+        self.mark_job_running(job)
+        job.results = Box(logs=Box(), errors=Box(),)
+        try:
+            if job.job_type == JOB_TYPE_EVAL:
+                self.run_eval_job(job)
+            elif job.job_type == JOB_TYPE_SIM_BUILD:
+                self.run_build_job(job)
+        except Exception:
+            self.handle_job_exception(job)
+        self.make_instance_available(job.instance_id)
+        self.mark_job_finished(job)
+        log.success(f'Finished job: '
+                    f'{job.to_json(indent=2, default=str)}')
+
+    @staticmethod
+    def handle_job_exception(job):
+        """Exceptions that happen outside of the containers are handled here.
+        These are likely "our" fault and should be investigated.
+        """
+        exception_sink = StringIO()
+        exception_sink_ref = log.add(exception_sink)
+        log.exception(f'Error running job '
+                      f'{job.to_json(indent=2, default=str)}')
+        job.coordinator_error = exception_sink.getvalue()
+        log.remove(exception_sink_ref)
+        exception_sink.close()
+        # TODO: Some form of retry if it's a network or other
+        #   transient error
 
     def make_instance_available(self, instance_id):
         # TODO: Move this into problem-constants and rename
@@ -139,7 +162,7 @@ class Worker:
         return ret
 
     def mark_job_finished(self, job):
-        # We've added results to the job so disable compare_and_swap
+        # We've added results to the job so don't compare_and_swap
         # The initial check to mark running will be enough to
         # to prevent multiple runners.
         job.status = JOB_STATUS_FINISHED
@@ -164,6 +187,7 @@ class Worker:
                 f'{new_job.to_json(indent=2, sort_keys=True, default=str)}')
 
     def run_build_job(self, job):
+        results = job.results
         secrets = get_secrets_db()
         docker_creds = secrets.get('DEEPDRIVE_DOCKER_CREDS_encrypted')
         docker_username = decrypt_symmetric(docker_creds['username'])
@@ -181,16 +205,15 @@ class Worker:
                                   AWS_SECRET_ACCESS_KEY=aws_secret,
                               ))
         containers, success = self.run_containers([container_args])
-        results = Box(
-            logs=Box(),
-            errors=Box(),
-            sim_base_docker_digest=sim_base_image.attrs['RepoDigests'][0],
-        )
+
+        results.sim_base_docker_digest=sim_base_image.attrs['RepoDigests'][0]
+
         self.set_container_logs_and_errors(containers=containers,
                                            results=results, job=job)
         job.results = results  # These are saved when the job is marked finished
 
     def run_eval_job(self, job):
+        results = job.results
         # TODO: Support N bot and N problem containers
         eval_spec = job.eval_spec
 
@@ -198,28 +221,31 @@ class Worker:
         bot_tag = job.eval_spec.docker_tag
 
         problem_image = self.get_image(problem_tag)
+        if problem_image is None:
+            results.errors.problem_pull = 'Could not pull problem image'
+
         bot_image = self.get_image(bot_tag)
+        if bot_image is None:
+            results.errors.bot_pull = 'Could not pull bot image'
 
-        problem_container_args, results_mount = self.get_problem_container_args(
-            problem_tag, eval_spec)
-        bot_container_args = dict(docker_tag=bot_tag)
+        if None not in [problem_image, bot_image]:
+            problem_container_args, results_mount = \
+                self.get_problem_container_args(problem_tag, eval_spec)
+            bot_container_args = dict(docker_tag=bot_tag)
 
-        results = Box(
-            logs=Box(),
-            errors=Box(),
-            problem_docker_digest=problem_image.attrs['RepoDigests'][0],
-            bot_docker_digest=bot_image.attrs['RepoDigests'][0],)
+            results.problem_docker_digest = \
+                problem_image.attrs['RepoDigests'][0]
+            results.bot_docker_digest = bot_image.attrs['RepoDigests'][0]
 
-        containers = [problem_container_args]
-        if not self.run_problem_only:
-            containers.append(bot_container_args)
-        containers, success = self.run_containers(containers)
-        self.set_container_logs_and_errors(containers=containers,
-                                           results=results, job=job)
-        if success:
-            # Fetch eval results stored on the host by the problem container
-            results.update(self.get_results(results_dir=results_mount))
-        job.results = results  # These are saved when the job is marked finished
+            containers = [problem_container_args]
+            if not self.run_problem_only:
+                containers.append(bot_container_args)
+            containers, success = self.run_containers(containers)
+            self.set_container_logs_and_errors(containers=containers,
+                                               results=results, job=job)
+            if success:
+                # Fetch eval results stored on the host by the problem container
+                results.update(self.get_results(results_dir=results_mount))
 
         self.send_results(job)
 
@@ -250,20 +276,24 @@ class Worker:
             self.docker.login(username=dockerhub_username,
                               password=dockerhub_password)
             self.loggedin_to_docker = True
-
-        result = self.docker.images.pull(tag)
-        log.info('Finished pulling docker image %s' % tag)
-        if isinstance(result, list):
-            ret = self.get_latest_docker_image(result)
-            if ret is None:
-                raise RuntimeError(
-                    f'Could not get pull latest image for {tag}. '
-                    f'tags found were: {result}')
-        elif isinstance(result, Image):
-            ret = result
+        try:
+            result = self.docker.images.pull(tag)
+        except:
+            log.exception(f'Could not pull {tag}')
+            ret = None
         else:
-            log.warning(f'Got unexpected result when pulling {tag} of {result}')
-            ret = result
+            log.info('Finished pulling docker image %s' % tag)
+            if isinstance(result, list):
+                ret = self.get_latest_docker_image(result)
+                if ret is None:
+                    raise RuntimeError(
+                        f'Could not get pull latest image for {tag}. '
+                        f'tags found were: {result}')
+            elif isinstance(result, Image):
+                ret = result
+            else:
+                log.warning(f'Got unexpected result when pulling {tag} of {result}')
+                ret = result
         return ret
 
     @staticmethod
@@ -498,11 +528,18 @@ def main():
 
 
 def play():
+    sink = StringIO()
+    sink_ref = log.add(sink)
+    log.info('asdf')
+    log.remove(sink_ref)
+    print(sink.getvalue())
     pass
     # encrypt_db_key(get_db('secrets'), 'DEEPDRIVE_DOCKER_CREDS')
 
 
 if __name__ == '__main__':
-    # play()
-    main()
+    if 'play' in sys.argv:
+        play()
+    else:
+        main()
 
