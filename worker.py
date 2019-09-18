@@ -513,7 +513,8 @@ class Worker:
                 if (
                     image_name.startswith('deepdriveio/deepdrive:problem_') or
                     image_name.startswith('deepdriveio/deepdrive:bot_') or
-                    image_name == 'deepdriveio/private:deepdrive-sim-package'
+                    image_name == 'deepdriveio/private:deepdrive-sim-package' or
+                    image_name == 'deepdriveio/ue4-deepdrive-deps:latest'
                 ):
                     return True
             return False
