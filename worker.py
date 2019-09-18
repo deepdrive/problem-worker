@@ -81,6 +81,8 @@ class Worker:
                 log.success('Ending loop, so that we are restarted with '
                             'changes')
                 return
+
+            # TODO: Allow more than one job to run at a time.
             self.stop_old_containers_if_running()
             job = self.check_for_jobs()
             if job:
