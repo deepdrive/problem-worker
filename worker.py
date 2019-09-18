@@ -199,12 +199,13 @@ class Worker:
         aws_key_id = decrypt_symmetric(aws_creds['AWS_ACCESS_KEY_ID'])
         aws_secret = decrypt_symmetric(aws_creds['AWS_SECRET_ACCESS_KEY'])
         container_args = dict(docker_tag=SIM_IMAGE_BASE_TAG,
+                              name=f'sim_build_{job.id}',
                               env=dict(
                                   DEEPDRIVE_COMMIT=job.commit,
                                   DEEPDRIVE_BRANCH=job.branch,
                                   AWS_ACCESS_KEY_ID=aws_key_id,
-                                  AWS_SECRET_ACCESS_KEY=aws_secret,
-                              ))
+                                  AWS_SECRET_ACCESS_KEY=aws_secret,))
+
         containers, success = self.run_containers([container_args])
 
         results.sim_base_docker_digest=sim_base_image.attrs['RepoDigests'][0]
@@ -321,6 +322,7 @@ class Worker:
         results_mount = self.get_results_mount(eval_spec)
         container = dict(docker_tag=tag,
                          env=container_env,
+                         name=f'problem_eval_id_{eval_spec.eval_id}',
                          volumes={
                              results_mount: {
                                  'bind': BOTLEAGUE_RESULTS_DIR,
@@ -481,9 +483,12 @@ class Worker:
                                            '%Y-%m-%dT%H:%M:%S.%f')
         return last_timestamp
 
-    def start_container(self, docker_tag, cmd=None, env=None, volumes=None):
-        container = self.docker.containers.run(docker_tag, command=cmd,
-                                               detach=True, stdout=False,
+    def start_container(self, docker_tag, cmd=None, env=None, volumes=None,
+                        name=None):
+        container = self.docker.containers.run(docker_tag,
+                                               command=cmd,
+                                               detach=True,
+                                               stdout=False,
                                                stderr=False,
                                                environment=env,
                                                volumes=volumes,
