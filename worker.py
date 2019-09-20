@@ -210,7 +210,7 @@ class Worker:
 
         containers, success = self.run_containers([container_args])
 
-        results.sim_base_docker_digest=sim_base_image.attrs['RepoDigests'][0]
+        results.sim_base_docker_digest = sim_base_image.attrs['RepoDigests'][0]
 
         self.set_container_logs_and_errors(containers=containers,
                                            results=results, job=job)
