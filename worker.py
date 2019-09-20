@@ -259,6 +259,7 @@ class Worker:
             container_id = \
                 f'{image_name}_{container.short_id}'
             run_logs = container.logs(timestamps=True).decode()
+            results.json_results_from_logs = self.get_json_out(run_logs)
             log.log('CONTAINER', f'{container_id} logs begin \n' + ('-' * 80))
             log.log('CONTAINER', run_logs)
             log.log('CONTAINER', f'{container_id} logs end \n' + ('-' * 80))
@@ -273,6 +274,19 @@ class Worker:
                 run_logs, filename=f'{image_name}_job-{job.id}.txt')
             log.info(f'Uploaded logs for {container_id} to {log_url}')
             results.logs[container_id] = log_url
+
+    @staticmethod
+    def get_json_out(run_logs) -> str:
+        json_out_delimiter = 'π__JSON_OUT_LINE_DELIMITER__π'
+        json_out_start = run_logs.find(json_out_delimiter)
+        if json_out_start == -1:
+            return ''
+        else:
+            json_out_end = run_logs.find('\n', json_out_start)
+            json_out_start += len(json_out_delimiter)
+            json_out = run_logs[json_out_start:json_out_end].strip()
+            log.success(f'Found json out: {json_out}')
+            return json_out
 
     def get_image(self, tag, dockerhub_username=None, dockerhub_password=None):
         log.info('Pulling docker image %s...' % tag)
@@ -296,7 +310,8 @@ class Worker:
             elif isinstance(result, Image):
                 ret = result
             else:
-                log.warning(f'Got unexpected result when pulling {tag} of {result}')
+                log.warning(f'Got unexpected result when pulling {tag} '
+                            f'of {result}')
                 ret = result
         return ret
 
@@ -313,7 +328,7 @@ class Worker:
         result_dir = f'{BOTLEAGUE_RESULTS_DIR}/' + \
                      f'{BOTLEAGUE_INNER_RESULTS_DIR_NAME}'
         creds_path = '/mnt/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json'
-        container_env = dict(
+        container_env = Box(
             BOTLEAGUE_EVAL_KEY=eval_spec.eval_key,
             BOTLEAGUE_SEED=eval_spec.seed,
             BOTLEAUGE_PROBLEM=eval_spec.problem,
