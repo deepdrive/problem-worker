@@ -319,11 +319,14 @@ class Worker:
             BOTLEAUGE_PROBLEM=eval_spec.problem,
             BOTLEAGUE_RESULT_FILEPATH=result_dir,
             DEEPDRIVE_UPLOAD='1',
-            GOOGLE_APPLICATION_CREDENTIALS=creds_path
-        )
+            GOOGLE_APPLICATION_CREDENTIALS=creds_path)
+        if dbox(eval_spec).problem_def.problem_ci_replace_sim_url:
+            container_env.PROBLEM_CI_REPLACE_SIM_URL = \
+                eval_spec.problem_def.problem_ci_replace_sim_url
+
         results_mount = self.get_results_mount(eval_spec)
         container = dict(docker_tag=tag,
-                         env=container_env,
+                         env=container_env.to_dict(),
                          name=f'problem_eval_id_{eval_spec.eval_id}',
                          volumes={
                              results_mount: {
@@ -342,6 +345,7 @@ class Worker:
         if is_docker():
             results_mount_base = '/mnt/botleague_results'
         else:
+            # For local, native testing
             results_mount_base = f'{DIR}/botleague_results'
         results_mount = f'{results_mount_base}/{eval_spec.eval_id}'
         os.makedirs(results_mount, exist_ok=True)
@@ -371,7 +375,7 @@ class Worker:
                                 f'{json.dumps(json_resp, indent=2)}')
             except Exception:
                 # TODO: Create an alert on this log message
-                log.exception('Possible problem results back to '
+                log.exception('Possible problem sending results back to '
                               'problem endpoint.')
 
     @staticmethod
