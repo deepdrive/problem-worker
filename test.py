@@ -16,8 +16,8 @@ from worker import Worker
 
 def test_build_sim():
     job = get_test_job(JOB_TYPE_SIM_BUILD)
-    job.branch = 'v3_stable'
-    job.commit = 'e5df918089c5e4afd986ff5a09c293b90bf96869'
+    job.branch = 'v3'
+    job.commit = 'daee9013bfd680c156b064313d377583d18fb595'
     job.build_id = utils.generate_rand_alphanumeric(32)
     run_test_job(job)
 
