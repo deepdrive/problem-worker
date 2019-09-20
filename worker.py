@@ -205,6 +205,7 @@ class Worker:
                               env=dict(
                                   DEEPDRIVE_COMMIT=job.commit,
                                   DEEPDRIVE_BRANCH=job.branch,
+                                  IS_DEEPDRIVE_SIM_BUILD='1',
                                   AWS_ACCESS_KEY_ID=aws_key_id,
                                   AWS_SECRET_ACCESS_KEY=aws_secret,))
 
