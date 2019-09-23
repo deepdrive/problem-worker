@@ -76,6 +76,10 @@ class Worker:
         iters = 0
         log.info('Worker started, checking for jobs...')
         while True:
+            # TODO: While disk low, prune images back 1 day at a time with
+            #  docker container prune --force --filter "until=24h"
+            #  Send alert to deepdrive-alerts when this happens
+
             if self.auto_updater.updated():
                 # We will be auto restarted by systemd with new code
                 log.success('Ending loop, so that we are restarted with '
