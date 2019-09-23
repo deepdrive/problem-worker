@@ -341,7 +341,7 @@ class Worker:
             DEEPDRIVE_UPLOAD='1',
             GOOGLE_APPLICATION_CREDENTIALS=creds_path)
         if dbox(eval_spec).problem_def.problem_ci_replace_sim_url:
-            container_env.PROBLEM_CI_REPLACE_SIM_URL = \
+            container_env.SIM_URL = \
                 eval_spec.problem_def.problem_ci_replace_sim_url
 
         # TODO: Just pass the whole eval_spec by copying/mounting a json file
