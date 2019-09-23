@@ -340,6 +340,9 @@ class Worker:
             container_env.PROBLEM_CI_REPLACE_SIM_URL = \
                 eval_spec.problem_def.problem_ci_replace_sim_url
 
+        # TODO: Just pass the whole eval_spec by copying/mounting a json file
+        #  into the container
+
         results_mount = self.get_results_mount(eval_spec)
         container = dict(docker_tag=tag,
                          env=container_env.to_dict(),
