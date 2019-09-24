@@ -36,6 +36,7 @@ cd /usr/local/src
 sudo git clone https://github.com/deepdrive/problem-worker --branch production
 
 # Perform initial run
+sudo su
 cd problem-worker
 make run
 docker ps
