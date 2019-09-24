@@ -288,7 +288,7 @@ class Worker:
 
     @staticmethod
     def get_json_out(run_logs) -> str:
-        json_out_delimiter = 'π__JSON_OUT_LINE_DELIMITER__π'
+        json_out_delimiter = '|~__JSON_OUT_LINE_DELIMITER__~|'
         json_out_start = run_logs.find(json_out_delimiter)
         if json_out_start == -1:
             return ''
