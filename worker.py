@@ -560,7 +560,8 @@ class Worker:
             return False
 
         for container in containers:
-            if container.status == 'running' and is_botleague(container):
+            if container.status == 'running' and is_botleague(container) and \
+                    not in_test():
                 container.stop()
 
 
