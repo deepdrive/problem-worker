@@ -205,14 +205,19 @@ class Worker:
         aws_creds = secrets.get('DEEPDRIVE_AWS_CREDS_encrypted')
         aws_key_id = decrypt_symmetric(aws_creds['AWS_ACCESS_KEY_ID'])
         aws_secret = decrypt_symmetric(aws_creds['AWS_SECRET_ACCESS_KEY'])
+        creds_path = '/mnt/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json'
         container_args = dict(docker_tag=SIM_IMAGE_BASE_TAG,
                               name=f'sim_build_{job.id}',
+                              volumes={'/root/.gcpcreds': {
+                                      'bind': '/mnt/.gcpcreds',
+                                      'mode': 'rw'}},
                               env=dict(
                                   DEEPDRIVE_COMMIT=job.commit,
                                   DEEPDRIVE_BRANCH=job.branch,
                                   IS_DEEPDRIVE_SIM_BUILD='1',
                                   AWS_ACCESS_KEY_ID=aws_key_id,
-                                  AWS_SECRET_ACCESS_KEY=aws_secret,))
+                                  AWS_SECRET_ACCESS_KEY=aws_secret,
+                                  GOOGLE_APPLICATION_CREDENTIALS=creds_path,))
 
         containers, success = self.run_containers([container_args])
 
