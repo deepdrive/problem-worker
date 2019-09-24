@@ -262,6 +262,20 @@ class Worker:
                 # Fetch eval results stored on the host by the problem container
                 results.update(self.get_results(results_dir=results_mount))
 
+            eval_data = job.eval_spec.full_eval_request
+            problem_owner, problem_name = eval_data.split('/')
+            artifact_repo = 'deepdriveio/botleague'
+            if not self.run_problem_only:
+                # deepdriveio/botleague:bot-crizcraig-deepdrive-domain_randomization-2019-09-19_09-58-56PM_TXDIT35OK9UE8D7VY4M63DWZ1
+                bot_tag = f'bot-{eval_data.username}-{problem_owner}_' \
+                    f'{problem_name}-{job.id}'
+                self.docker.images.push(artifact_repo, bot_tag)
+
+            # deepdriveio/botleague:problem-deepdrive-domain_randomization-2019-09-19_09-58-56PM_TXDIT35OK9UE8D7VY4M63DWZ1
+            problem_tag = f'problem-{problem_owner}_{problem_name}-{job.id}'
+            self.docker.images.push(artifact_repo, problem_tag)
+
+
         self.send_results(job)
 
     def set_container_logs_and_errors(self, containers, results, job):
