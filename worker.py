@@ -92,8 +92,9 @@ class Worker:
             if job:
                 self.run_job(job)
 
-            # TODO: Send heartbeat every minute? We'll be restarted after
-            #  and idle or job timeout, so not that big of a deal.
+            # TODO: Send heartbeat every minute. Even with idle, a job without
+            #  a timeout can be stuck forever if the worker process is down.
+            #
 
             # TODO: Clean up containers and images with LRU and depending on
             #  disk space. Shouldn't matter until more problems and providers
