@@ -1,6 +1,4 @@
-from google.cloud import logging as gcloud_logging
-import loguru
-
+# ----------------------- Start shared with problem-coordinator
 stackdriver_client = gcloud_logging.Client()
 
 """
@@ -60,3 +58,48 @@ def add_stackdriver_sink(loguru_logger, instance_id):
         stackdriver_logger.log_text(message, severity=severity)
 
     loguru_logger.add(sink)
+
+
+class SlackMsgHash:
+    last_notified: float = None
+    count: int = 0
+
+def add_slack_error_sink(loguru_logger):
+    import slack
+    from botleague_helpers.crypto import decrypt_db_key
+    import hashlib
+
+    client = slack.WebClient(token=decrypt_db_key('SLACK_ERROR_BOT_TOKEN'))
+
+    msg_hashes = defaultdict(SlackMsgHash)
+
+    def sink(message):
+        import hashlib
+        level = str(message.record['level'])
+
+        def send_message():
+
+            message_plus_count = f'{message}.\n' \
+                f'Message duplicates in this process ' \
+                f'{msg_hashes[msg_hash].count}'
+            response = client.chat_postMessage(channel='#deepdrive-alerts',
+                                               text=message_plus_count)
+            msg_hashes[msg_hash].last_notified = time.time()
+            msg_hashes[msg_hash].count += 1
+            # assert response["ok"]
+            # assert response["message"]["text"] == message
+
+        if level in ['ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY']:
+            text = message.record['message']
+            msg_hash = hashlib.md5(text.encode()).hexdigest()
+            if msg_hash in msg_hashes:
+                last_notified = msg_hashes[msg_hash].last_notified
+                if time.time() - last_notified > 60 * 5:
+                    send_message()
+            else:
+                send_message()
+
+    loguru_logger.add(sink)
+
+add_slack_error_sink(log)
+# ----------------------- End shared with problem-coordinator
