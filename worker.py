@@ -32,9 +32,9 @@ from problem_constants.constants import JOB_STATUS_RUNNING, \
     BOTLEAGUE_LOG_DIR, CONTAINER_RUN_OPTIONS, \
     BOTLEAGUE_INNER_RESULTS_DIR_NAME, JOB_STATUS_ASSIGNED, JOB_TYPE_EVAL, \
     JOB_TYPE_SIM_BUILD
-from problem_constants import constants
+from problem_constants import constants as prob_const
 
-from constants import SIM_IMAGE_BASE_TAG
+from constants import SIM_IMAGE_BASE_TAG, STACKDRIVER_LOG_NAME
 from logs import add_stackdriver_sink
 from utils import is_docker, dbox
 
@@ -146,8 +146,10 @@ class Worker:
         # TODO: Move this into problem-constants and rename
         #  problem-helpers as it's shared with problem-worker
         instance = dbox(instances_db.get(instance_id))
-        if instance.status != constants.INSTANCE_STATUS_AVAILABLE:
-            instance.status = constants.INSTANCE_STATUS_AVAILABLE
+        if not instance:
+            log.warning('Instance does not exist, perhaps it was terminated.')
+        elif instance.status != prob_const.INSTANCE_STATUS_AVAILABLE:
+            instance.status = prob_const.INSTANCE_STATUS_AVAILABLE
             instance.time_last_available = SERVER_TIMESTAMP
             instances_db.set(instance_id, instance)
             log.info(f'Made instance {instance_id} available')
