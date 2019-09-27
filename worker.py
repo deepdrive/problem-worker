@@ -70,7 +70,7 @@ class Worker:
         self.auto_updater = AutoUpdater(self.is_on_gcp)
         self.run_problem_only = run_problem_only
         self.loggedin_to_docker = False
-        add_stackdriver_sink(log, self.instance_id)
+        add_stackdriver_sink(log, f'{STACKDRIVER_LOG_NAME}-inst-{self.instance_id}')
 
     def loop(self, max_iters=None):
         iters = 0
