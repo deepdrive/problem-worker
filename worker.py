@@ -80,6 +80,8 @@ class Worker:
             #  docker container prune --force --filter "until=24h"
             #  Send alert to deepdrive-alerts when this happens
 
+            # TODO: Pull in containers that we'll likely need
+
             if self.auto_updater.updated():
                 # We will be auto restarted by systemd with new code
                 log.success('Ending loop, so that we are restarted with '
