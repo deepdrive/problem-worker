@@ -25,11 +25,11 @@ run: remove_old
 devrun: remove_old
 	docker run $(RUN_ARGS_DEV) -it $(TAG)
 
-test: remove_old
+test: remove_old build
 	echo RUNNING TESTS --------------------------------------------------------
 	docker run $(RUN_ARGS_DEV) -it $(TAG) python test.py
 
-test_dummy: remove_old
+test_dummy: remove_old build
 	echo RUNNING TEST DUMMY --------------------------------------------------------
 	docker run $(RUN_ARGS_DEV) -it $(TAG) python test.py test_dummy_container
 
