@@ -4,7 +4,7 @@ TAG=deepdriveio/problem-worker
 SSH=gcloud beta compute --project "silken-impulse-217423" ssh --zone "us-west1-b" "deepdrive-worker-0"
 CONTAINER_NAME=problem_worker
 RUN_ARGS=--name $(CONTAINER_NAME) -v ~/.gcpcreds/:/root/.gcpcreds -v /mnt/botleague_results:/mnt/botleague_results -v /var/run/docker.sock:/var/run/docker.sock -v `pwd`:/problem-worker
-RUN_ARGS_DEV=$(RUN_ARGS) -e INSTANCE_ID=notaninstanceid -e GOOGLE_APPLICATION_CREDENTIALS=/root/.gcpcreds/VoyageProject-d33af8724280.json
+RUN_ARGS_DEV=$(RUN_ARGS) --net=host -e INSTANCE_ID=notaninstanceid -e GOOGLE_APPLICATION_CREDENTIALS=/root/.gcpcreds/VoyageProject-d33af8724280.json
 
 build:
 	docker build -t $(TAG) .
