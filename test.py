@@ -66,12 +66,17 @@ def run_problem_eval(
     job = get_test_job(JOB_TYPE_EVAL)
 
     job.eval_spec = {
-            'docker_tag': bot_tag,
-            'eval_id': job.id,
-            'eval_key': 'fake_eval_key',
-            'seed': 1,
-            'problem': problem,
-            'pull_request': None}
+        'docker_tag': bot_tag,
+        'eval_id': job.id,
+        'eval_key': 'fake_eval_key',
+        'seed': 1,
+        'problem': problem,
+        'pull_request': None,
+        'full_eval_request': {
+            'problem_id': 'deepdrive/dummy_test_problem',
+            'botname': 'dummy',
+            'username': 'internal_test'
+        },}
 
     run_test_job(job, run_problem_only)
 
