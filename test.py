@@ -52,6 +52,7 @@ def run_test_job(job, run_problem_only=False):
         assert job.results
         assert job.results.logs
         assert job.status.lower() == JOB_STATUS_FINISHED
+        assert not utils.dbox(job).coordinator_error
         del os.environ['FORCE_FIRESTORE_DB']
         assert 'FORCE_FIRESTORE_DB' not in os.environ
     finally:
