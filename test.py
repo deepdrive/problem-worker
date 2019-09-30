@@ -73,6 +73,7 @@ def run_problem_eval(
         'seed': 1,
         'problem': problem,
         'pull_request': None,
+        'problem_def': {},
         'full_eval_request': {
             'problem_id': 'deepdrive/dummy_test_problem',
             'botname': 'dummy',
