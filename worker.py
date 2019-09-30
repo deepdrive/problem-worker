@@ -8,6 +8,7 @@ import re
 
 from botleague_helpers.crypto import decrypt_symmetric
 from botleague_helpers.db import get_db
+from botleague_helpers.utils import box2json
 from datetime import datetime
 
 import time
@@ -19,7 +20,7 @@ import docker
 from box import Box
 from docker.models.images import Image
 from google.cloud.firestore_v1 import SERVER_TIMESTAMP
-from loguru import logger as log
+from logs import log
 
 from botleague_helpers.config import in_test
 
@@ -35,7 +36,7 @@ from problem_constants.constants import JOB_STATUS_RUNNING, \
 from problem_constants import constants as prob_const
 
 from constants import SIM_IMAGE_BASE_TAG, STACKDRIVER_LOG_NAME
-from logs import add_stackdriver_sink
+from botleague_helpers.logs import add_stackdriver_sink
 from utils import is_docker, dbox
 
 container_run_level = log.level('CONTAINER', no=10, color='<magenta>')
@@ -298,15 +299,20 @@ class Worker:
             log.log('CONTAINER', f'{container_id} logs begin \n' + ('-' * 80))
             log.log('CONTAINER', run_logs)
             log.log('CONTAINER', f'{container_id} logs end \n' + ('-' * 80))
+            log_url = self.upload_logs(
+                run_logs, filename=f'{image_name}_job-{job.id}.txt')
+
             exit_code = container.attrs['State']['ExitCode']
             if exit_code != 0:
                 results.errors[container_id] = f'Container failed with' \
                     f' exit code {exit_code}'
+                log.error(f'Container {container_id} failed with {exit_code}'
+                          f' for job {box2json(job)}, logs: {log_url}')
             elif container.status == 'dead':
                 results.errors[container_id] = f'Container died, please retry.'
+                log.error(f'Container {container_id} died'
+                          f' for job {box2json(job)}, logs: {log_url}')
 
-            log_url = self.upload_logs(
-                run_logs, filename=f'{image_name}_job-{job.id}.txt')
             log.info(f'Uploaded logs for {container_id} to {log_url}')
             results.logs[container_id] = log_url
 
@@ -370,7 +376,7 @@ class Worker:
             BOTLEAGUE_RESULT_FILEPATH=result_dir,
             DEEPDRIVE_UPLOAD='1',
             GOOGLE_APPLICATION_CREDENTIALS=creds_path)
-        if dbox(eval_spec).problem_def.problem_ci_replace_sim_url:
+        if dbox(eval_spec.problem_def).problem_ci_replace_sim_url:
             container_env.SIM_URL = \
                 eval_spec.problem_def.problem_ci_replace_sim_url
 
@@ -505,6 +511,7 @@ class Worker:
                                       last_timestamp)
 
                 if log_lines:
+                    # noinspection PyTypeChecker
                     last_loglines[container_idx] = log_lines[-1]
                     log.log('CONTAINER', '\n'.join(log_lines))
                 last_timestamps[container_idx] = last_timestamp

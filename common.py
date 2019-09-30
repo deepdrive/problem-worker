@@ -3,7 +3,7 @@ import os
 from typing import Tuple
 
 import requests
-from loguru import logger as log
+from logs import log
 
 from botleague_helpers.config import in_test
 from botleague_helpers.db import get_db

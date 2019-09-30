@@ -2,7 +2,7 @@ import os
 import time
 
 import git
-from loguru import logger as log
+from logs import log
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
