@@ -17,7 +17,7 @@ from random import random
 
 import requests
 import docker
-from box import Box
+from box import Box, BoxList
 from docker.models.images import Image
 from google.cloud.firestore_v1 import SERVER_TIMESTAMP
 from logs import log
@@ -457,7 +457,7 @@ class Worker:
         except Exception as e:
             log.error(f'Exception encountered while running '
                       f'containers: '
-                      f'{containers.to_json(indent=2, default=str)}, '
+                      f'{BoxList(containers).to_json(indent=2, default=str)}, '
                       'stopping all containers.')
             for container in containers:
                 log.error(f'Stopping orphaned container: {container}')
