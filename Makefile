@@ -7,7 +7,7 @@ RUN_ARGS=--name $(CONTAINER_NAME) -v ~/.gcpcreds/:/root/.gcpcreds -v /mnt/botlea
 RUN_ARGS_DEV=$(RUN_ARGS) --net=host -e INSTANCE_ID=notaninstanceid -e GOOGLE_APPLICATION_CREDENTIALS=/root/.gcpcreds/VoyageProject-d33af8724280.json
 
 build:
-	docker build -t $(TAG) .
+	docker build  --network=host -t $(TAG) .
 
 push:
 	echo Pusing docker container. Note that workers will not use the latest docker container unless they are restarted.
@@ -17,7 +17,7 @@ ssh:
 	$(SSH)
 
 remove_old:
-	docker rm $(CONTAINER_NAME)
+	docker rm $(CONTAINER_NAME) || echo no container, good
 
 run: remove_old
 	docker run $(RUN_ARGS) --restart=unless-stopped --detach -e LOGURU_LEVEL=INFO $(TAG)
@@ -32,6 +32,14 @@ test: remove_old build
 test_dummy: remove_old build
 	echo RUNNING TEST DUMMY --------------------------------------------------------
 	docker run $(RUN_ARGS_DEV) -it $(TAG) python test.py test_dummy_container
+
+test_eval: remove_old build
+	echo RUNNING TEST DUMMY --------------------------------------------------------
+	docker run $(RUN_ARGS_DEV) -it $(TAG) python test.py test_domain_randomization
+
+test_build: remove_old build
+	echo RUNNING TEST DUMMY --------------------------------------------------------
+	docker run $(RUN_ARGS_DEV) -it $(TAG) python test.py test_build_sim
 
 bash: remove_old
 	docker run $(RUN_ARGS) -it $(TAG) bash
