@@ -1,12 +1,13 @@
 import json
 import os
 import sys
+
 from io import StringIO
 from typing import Optional
 
 import re
 
-from botleague_helpers.crypto import decrypt_symmetric
+from botleague_helpers.crypto import decrypt_symmetric, decrypt_db_key
 from botleague_helpers.db import get_db
 from botleague_helpers.utils import box2json
 from datetime import datetime
@@ -32,7 +33,7 @@ from problem_constants.constants import JOB_STATUS_RUNNING, \
     BOTLEAGUE_RESULTS_FILEPATH, BOTLEAGUE_RESULTS_DIR, BOTLEAGUE_LOG_BUCKET, \
     BOTLEAGUE_LOG_DIR, CONTAINER_RUN_OPTIONS, \
     BOTLEAGUE_INNER_RESULTS_DIR_NAME, JOB_STATUS_ASSIGNED, JOB_TYPE_EVAL, \
-    JOB_TYPE_SIM_BUILD
+    JOB_TYPE_SIM_BUILD, JOB_TYPE_DEEPDRIVE_BUILD
 from problem_constants import constants as prob_const
 
 from constants import SIM_IMAGE_BASE_TAG, STACKDRIVER_LOG_NAME
@@ -72,6 +73,7 @@ class Worker:
         self.run_problem_only = run_problem_only
         self.loggedin_to_docker = False
         add_stackdriver_sink(log, f'{STACKDRIVER_LOG_NAME}-inst-{self.instance_id}')
+        self.docker_creds = None
 
     def loop(self, max_iters=None):
         iters = 0
@@ -102,6 +104,9 @@ class Worker:
             # TODO: Clean up containers and images with LRU and depending on
             #  disk space. Shouldn't matter until more problems and providers
             #  are added.
+
+            # TODO: Use preemptible
+            #  instances after docker caching is worked out.
             iters += 1
             if max_iters is not None and iters >= max_iters:
                 # Used for testing
@@ -113,6 +118,7 @@ class Worker:
     def run_job(self, job):
         log.success(f'Running job: '
                     f'{job.to_json(indent=2, default=str)}')
+        self.login_to_docker()
         self.mark_job_running(job)
         job.results = Box(logs=Box(), errors=Box(),)
         try:
@@ -120,6 +126,8 @@ class Worker:
                 self.run_eval_job(job)
             elif job.job_type == JOB_TYPE_SIM_BUILD:
                 self.run_build_job(job)
+            elif job.job_type == JOB_TYPE_DEEPDRIVE_BUILD:
+                self.run_deepdrive_job(job)
         except Exception:
             self.handle_job_exception(job)
         self.make_instance_available(self.instances_db, job.instance_id)
@@ -202,11 +210,7 @@ class Worker:
     def run_build_job(self, job):
         results = job.results
         secrets = get_secrets_db()
-        docker_creds = secrets.get('DEEPDRIVE_DOCKER_CREDS_encrypted')
-        docker_username = decrypt_symmetric(docker_creds['username'])
-        docker_password = decrypt_symmetric(docker_creds['password'])
-        sim_base_image = self.get_image(SIM_IMAGE_BASE_TAG, docker_username,
-                                        docker_password)
+        sim_base_image = self.get_image(SIM_IMAGE_BASE_TAG)
         aws_creds = secrets.get('DEEPDRIVE_AWS_CREDS_encrypted')
         aws_key_id = decrypt_symmetric(aws_creds['AWS_ACCESS_KEY_ID'])
         aws_secret = decrypt_symmetric(aws_creds['AWS_SECRET_ACCESS_KEY'])
@@ -272,7 +276,7 @@ class Worker:
             artifact_repo = 'deepdriveio/botleague'
             if not self.run_problem_only:
                 # deepdriveio/botleague:bot-crizcraig-deepdrive-domain_randomization-2019-09-19_09-58-56PM_TXDIT35OK9UE8D7VY4M63DWZ1
-                saved_bot_tag = f'bot-{eval_data.username}-{problem_owner}_' \
+                saved_bot_tag = f'bot-{eval_data.username}-{eval_data.botname}-{problem_owner}_' \
                     f'{problem_name}-{job.id}'
                 bot_image.tag(artifact_repo, saved_bot_tag)
                 log.info(f'Pushing {problem_tag}...')
@@ -288,6 +292,9 @@ class Worker:
 
 
         self.send_results(job)
+
+    def run_deepdrive_job(self, job):
+        pass
 
     def set_container_logs_and_errors(self, containers, results, job):
         for container in containers:
@@ -329,12 +336,8 @@ class Worker:
             log.success(f'Found json out: {json_out}')
             return json_out
 
-    def get_image(self, tag, dockerhub_username=None, dockerhub_password=None):
+    def get_image(self, tag):
         log.info('Pulling docker image %s...' % tag)
-        if dockerhub_username is not None and not self.loggedin_to_docker:
-            self.docker.login(username=dockerhub_username,
-                              password=dockerhub_password)
-            self.loggedin_to_docker = True
         try:
             result = self.docker.images.pull(tag)
         except:
@@ -355,6 +358,13 @@ class Worker:
                             f'of {result}')
                 ret = result
         return ret
+
+    def login_to_docker(self):
+        if not self.loggedin_to_docker:
+            creds = decrypt_db_key('DEEPDRIVE_DOCKER_CREDS')
+            self.docker.login(username=creds.username,
+                              password=creds.password)
+            self.loggedin_to_docker = True
 
     @staticmethod
     def get_latest_docker_image(images):
