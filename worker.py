@@ -36,7 +36,8 @@ from problem_constants.constants import JOB_STATUS_RUNNING, \
     JOB_TYPE_SIM_BUILD, JOB_TYPE_DEEPDRIVE_BUILD
 from problem_constants import constants as prob_const
 
-from constants import SIM_IMAGE_BASE_TAG, STACKDRIVER_LOG_NAME
+from constants import SIM_PACKAGE_IMAGE_TAG, STACKDRIVER_LOG_NAME, \
+    DEEPDRIVE_BUILD_IMAGE_TAG
 from botleague_helpers.logs import add_stackdriver_sink
 from utils import is_docker, dbox
 
@@ -127,7 +128,7 @@ class Worker:
             elif job.job_type == JOB_TYPE_SIM_BUILD:
                 self.run_build_job(job)
             elif job.job_type == JOB_TYPE_DEEPDRIVE_BUILD:
-                self.run_deepdrive_job(job)
+                self.run_deepdrive_build_job(job)
         except Exception:
             self.handle_job_exception(job)
         self.make_instance_available(self.instances_db, job.instance_id)
@@ -210,12 +211,12 @@ class Worker:
     def run_build_job(self, job):
         results = job.results
         secrets = get_secrets_db()
-        sim_base_image = self.get_image(SIM_IMAGE_BASE_TAG)
+        build_image = self.get_image(SIM_PACKAGE_IMAGE_TAG)
         aws_creds = secrets.get('DEEPDRIVE_AWS_CREDS_encrypted')
         aws_key_id = decrypt_symmetric(aws_creds['AWS_ACCESS_KEY_ID'])
         aws_secret = decrypt_symmetric(aws_creds['AWS_SECRET_ACCESS_KEY'])
         creds_path = '/mnt/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json'
-        container_args = dict(docker_tag=SIM_IMAGE_BASE_TAG,
+        container_args = dict(docker_tag=SIM_PACKAGE_IMAGE_TAG,
                               name=f'sim_build_{job.id}',
                               volumes={'/root/.gcpcreds': {
                                       'bind': '/mnt/.gcpcreds',
@@ -230,7 +231,7 @@ class Worker:
 
         containers, success = self.run_containers([container_args])
 
-        results.sim_base_docker_digest = sim_base_image.attrs['RepoDigests'][0]
+        results.sim_base_docker_digest = build_image.attrs['RepoDigests'][0]
 
         self.set_container_logs_and_errors(containers=containers,
                                            results=results, job=job)
@@ -293,8 +294,25 @@ class Worker:
 
         self.send_results(job)
 
-    def run_deepdrive_job(self, job):
-        pass
+    def run_deepdrive_build_job(self, job):
+        results = job.results
+        build_image = self.get_image(DEEPDRIVE_BUILD_IMAGE_TAG)
+        container_args = dict(docker_tag=DEEPDRIVE_BUILD_IMAGE_TAG,
+                              name=f'deepdrive_build_{job.id}',
+                              volumes={'/var/run/docker.sock': {
+                                  'bind': '/var/run/docker.sock',
+                                  'mode': 'rw'}},
+                              env=dict(
+                                  DEEPDRIVE_COMMIT=job.commit,
+                                  DEEPDRIVE_BRANCH=job.branch,
+                                  DOCKER_USERNAME=self.docker_creds.username,
+                                  DOCKER_PASSWORD=self.docker_creds.password,))
+
+        containers, success = self.run_containers([container_args])
+        results.deepdrive_ci_image_digest = build_image.attrs['RepoDigests'][0]
+        self.set_container_logs_and_errors(containers=containers,
+                                           results=results, job=job)
+        job.results = results  # These are saved when the job is marked finished
 
     def set_container_logs_and_errors(self, containers, results, job):
         for container in containers:
@@ -365,6 +383,7 @@ class Worker:
             self.docker.login(username=creds.username,
                               password=creds.password)
             self.loggedin_to_docker = True
+            self.docker_creds = creds
 
     @staticmethod
     def get_latest_docker_image(images):

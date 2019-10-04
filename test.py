@@ -8,7 +8,8 @@ from box import Box
 
 import utils
 from problem_constants.constants import JOB_STATUS_FINISHED, \
-    JOB_STATUS_ASSIGNED, JOB_TYPE_EVAL, JOB_TYPE_SIM_BUILD
+    JOB_STATUS_ASSIGNED, JOB_TYPE_EVAL, JOB_TYPE_SIM_BUILD, \
+    JOB_TYPE_DEEPDRIVE_BUILD
 
 from common import get_worker_instances_db
 from worker import Worker
@@ -18,6 +19,14 @@ def test_build_sim():
     job = get_test_job(JOB_TYPE_SIM_BUILD)
     job.branch = 'v3'
     job.commit = 'ee7c19d95e6b419ce70ffd8dda2acd661c1a4e3e'
+    job.build_id = utils.generate_rand_alphanumeric(32)
+    run_test_job(job)
+
+
+def test_build_deepdrive():
+    job = get_test_job(JOB_TYPE_DEEPDRIVE_BUILD)
+    job.branch = 'v3'
+    job.commit = '9607fe0ec36642f0a8df34665b646fed29e57229'
     job.build_id = utils.generate_rand_alphanumeric(32)
     run_test_job(job)
 
@@ -51,6 +60,7 @@ def run_test_job(job, run_problem_only=False):
         assert job
         assert job.results
         assert job.results.logs
+        assert not job.results.errors
         assert job.status.lower() == JOB_STATUS_FINISHED
         assert not utils.dbox(job).coordinator_error
         del os.environ['FORCE_FIRESTORE_DB']
