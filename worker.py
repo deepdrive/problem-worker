@@ -516,13 +516,7 @@ class Worker:
                 if last_timestamp is None:
                     log_lines = container.logs(timestamps=True).decode()
                     log_lines = re.split('\n', log_lines.strip())
-                    # noinspection PyPep8
-                    try:
-                        last_timestamp = self.get_last_timestamp(log_lines)
-                    except:
-                        log.warning(f'Could not get timestamp from logs '
-                                    f'{log_lines}')
-                        last_timestamp = None
+                    last_timestamp = self.get_last_timestamp(log_lines)
                 else:
                     log_lines = container.\
                         logs(timestamps=True, since=last_timestamp).decode()
@@ -572,10 +566,14 @@ class Worker:
     def get_last_timestamp(logs) -> Optional[datetime]:
         if not (logs and logs[0]):
             return None
-        last_timestamp = \
-            logs[-1].split(' ')[0]
-        last_timestamp = datetime.strptime(last_timestamp[:-4],
-                                           '%Y-%m-%dT%H:%M:%S.%f')
+        try:
+            last_timestamp = \
+                logs[-1].split(' ')[0]
+            last_timestamp = datetime.strptime(last_timestamp[:-4],
+                                               '%Y-%m-%dT%H:%M:%S.%f')
+        except:
+            log.exception(f'Could not parse time stamp from log line: {logs[-1]}')
+            last_timestamp = None
         return last_timestamp
 
     def start_container(self, docker_tag, cmd=None, env=None, volumes=None,
