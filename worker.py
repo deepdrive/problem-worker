@@ -118,7 +118,7 @@ class Worker:
 
     def run_job(self, job):
         log.success(f'Running job: '
-                    f'{job.to_json(indent=2, default=str)}')
+                    f'{box2json(job)}')
         self.login_to_docker()
         self.mark_job_running(job)
         job.results = Box(logs=Box(), errors=Box(),)
@@ -134,7 +134,7 @@ class Worker:
         self.make_instance_available(self.instances_db, job.instance_id)
         self.mark_job_finished(job)
         log.success(f'Finished job: '
-                    f'{job.to_json(indent=2, default=str)}')
+                    f'{box2json(job)}')
 
     @staticmethod
     def handle_job_exception(job):
@@ -144,8 +144,8 @@ class Worker:
         exception_sink = StringIO()
         exception_sink_ref = log.add(exception_sink)
         log.exception(f'Error running job '
-                      f'{job.to_json(indent=2, default=str)}')
-        job.coordinator_error = exception_sink.getvalue()
+                      f'{box2json(job)}')
+        job.worker_error = exception_sink.getvalue()
         log.remove(exception_sink_ref)
         exception_sink.close()
         # TODO: Some form of retry if it's a network or other
@@ -204,9 +204,9 @@ class Worker:
             raise RuntimeError(
                 f'Job status transaction failed, '
                 f'expected '
-                f'{old_job.to_json(indent=2, sort_keys=True, default=str)}\n'
+                f'{box2json(old_job)}\n'
                 f'got '
-                f'{new_job.to_json(indent=2, sort_keys=True, default=str)}')
+                f'{box2json(new_job)}')
 
     def run_build_job(self, job):
         results = job.results
@@ -448,7 +448,7 @@ class Worker:
         else:
             try:
                 log.info(f'Sending results for job \n'
-                         f'{job.to_json(indent=2, default=str)}')
+                         f'{box2json(job)}')
                 results_resp = requests.post(
                     f'{job.botleague_liaison_host}/results',
                     json=dict(eval_key=job.eval_spec.eval_key,
@@ -486,7 +486,7 @@ class Worker:
         except Exception as e:
             log.error(f'Exception encountered while running '
                       f'containers: '
-                      f'{BoxList(containers).to_json(indent=2, default=str)}, '
+                      f'{box2json(BoxList(containers))}, '
                       'stopping all containers.')
             for container in containers:
                 log.error(f'Stopping orphaned container: {container}')
