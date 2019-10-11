@@ -78,7 +78,7 @@ class Worker:
 
     def loop(self, max_iters=None):
         iters = 0
-        log.info('Worker started, checking for jobs...')
+        log.info('Worker started, checking for jobs ...')
         while True:
             # TODO: While disk low, prune images back 1 day at a time with
             #  docker container prune --force --filter "until=24h"
@@ -286,13 +286,13 @@ class Worker:
                 saved_bot_tag = f'bot-{eval_data.username}-{eval_data.botname}-{problem_owner}_' \
                     f'{problem_name}-{job.id}'
                 bot_image.tag(artifact_repo, saved_bot_tag)
-                log.info(f'Pushing {problem_tag}...')
+                log.info(f'Pushing {problem_tag} to {saved_bot_tag} ...')
                 self.docker.images.push(artifact_repo, saved_bot_tag)
                 log.info(f'Done pushing {problem_tag}')
 
             # deepdriveio/botleague:problem-deepdrive-domain_randomization-2019-09-19_09-58-56PM_TXDIT35OK9UE8D7VY4M63DWZ1
             saved_problem_tag = f'problem-{problem_owner}_{problem_name}-{job.id}'
-            log.info(f'Pushing {problem_tag}...')
+            log.info(f'Pushing {problem_tag} to {saved_bot_tag} ...')
             problem_image.tag(artifact_repo, saved_problem_tag)
             self.docker.images.push(artifact_repo, saved_problem_tag)
             log.info(f'Done pushing {problem_tag}')
@@ -361,7 +361,7 @@ class Worker:
             return json_out
 
     def get_image(self, tag):
-        log.info('Pulling docker image %s...' % tag)
+        log.info('Pulling docker image %s ...' % tag)
         try:
             result = self.docker.images.pull(tag)
         except:
@@ -485,7 +485,7 @@ class Worker:
         return results
 
     def run_containers(self, containers_args: list = None):
-        log.info('Running containers %s...' % containers_args)
+        log.info('Running containers %s ...' % containers_args)
         containers = [self.start_container(**c) for c in containers_args]
         try:
             containers, success = self.monitor_containers(containers)
