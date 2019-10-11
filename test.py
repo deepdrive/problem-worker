@@ -72,7 +72,8 @@ def run_test_job(job, run_problem_only=False):
 def run_problem_eval(
         problem='problem-worker-test',
         bot_tag='deepdriveio/deepdrive:problem_problem-worker-test',
-        run_problem_only=False):
+        run_problem_only=False,
+        problem_def=None):
 
     job = get_test_job(JOB_TYPE_EVAL)
 
@@ -83,9 +84,7 @@ def run_problem_eval(
         'seed': 1,
         'problem': problem,
         'pull_request': None,
-        'problem_def': {
-            'container_postfix': '_0'
-        },
+        'problem_def': problem_def or {},
         'full_eval_request': {
             'problem_id': 'deepdrive/dummy_test_problem',
             'botname': 'dummy',
@@ -102,7 +101,8 @@ def test_stop_old_jobs():
 
 def test_domain_randomization():
     run_problem_eval('domain_randomization',
-                     bot_tag='deepdriveio/deepdrive:bot_domain_randomization')
+                     bot_tag='deepdriveio/deepdrive:bot_domain_randomization',
+                     problem_def={'container_postfix': '_0'})
 
 
 def test_dummy_container():
