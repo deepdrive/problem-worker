@@ -46,6 +46,8 @@ bash: remove_old
 
 deploy: test push just_deploy
 
+quick_deploy: test_dummy push just_deploy
+
 just_deploy:
 	echo Pushing to git so that workers will update automatically once their current job is complete
 	echo Press enter if you have commited the changes you want to deploy to master, otherwise press Ctrl+C
