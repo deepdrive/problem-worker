@@ -242,8 +242,14 @@ class Worker:
         # TODO: Support N bot and N problem containers
         eval_spec = job.eval_spec
 
-        problem_tag = f'deepdriveio/deepdrive:problem_{eval_spec.problem}'
-        bot_tag = job.eval_spec.docker_tag
+        if dbox(eval_spec.problem_def).container_postfix:
+            container_postfix = eval_spec.problem_def.container_postfix
+        else:
+            container_postfix = ''
+
+        problem_tag = f'deepdriveio/deepdrive:problem_{eval_spec.problem}' \
+            f'{container_postfix}'
+        bot_tag = f'{job.eval_spec.docker_tag}{container_postfix}'
 
         problem_image = self.get_image(problem_tag)
         if problem_image is None:
