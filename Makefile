@@ -44,13 +44,15 @@ test_build: remove_old build
 bash: remove_old
 	docker run $(RUN_ARGS) -it $(TAG) bash
 
-deploy: test push just_deploy
+deploy: deploy_confirm test push just_deploy
 
-quick_deploy: test_dummy push just_deploy
+quick_deploy: deploy_confirm test_dummy push just_deploy
 
-just_deploy:
+deploy_confirm:
 	echo Pushing to git so that workers will update automatically once their current job is complete
 	echo Press enter if you have commited the changes you want to deploy to master, otherwise press Ctrl+C
 	read whatsayyou
+
+just_deploy:
 	git push origin master:production
 	echo Deployed!
