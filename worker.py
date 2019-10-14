@@ -311,8 +311,8 @@ class Worker:
                               env=dict(
                                   DEEPDRIVE_COMMIT=job.commit,
                                   DEEPDRIVE_BRANCH=job.branch,
-                                  DOCKER_USERNAME=self.docker_creds.username,
-                                  DOCKER_PASSWORD=self.docker_creds.password,))
+                                  DOCKER_USER=self.docker_creds.username,
+                                  DOCKER_PASS=self.docker_creds.password,))
 
         containers, success = self.run_containers([container_args])
         results.deepdrive_ci_image_digest = build_image.attrs['RepoDigests'][0]
