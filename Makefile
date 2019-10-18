@@ -5,9 +5,10 @@ SSH=gcloud beta compute --project "silken-impulse-217423" ssh --zone "us-west1-b
 CONTAINER_NAME=problem_worker
 RUN_ARGS=--name $(CONTAINER_NAME) -v ~/.gcpcreds/:/root/.gcpcreds -v /mnt/botleague_results:/mnt/botleague_results -v /var/run/docker.sock:/var/run/docker.sock -v `pwd`:/problem-worker
 RUN_ARGS_DEV=$(RUN_ARGS) --net=host -e INSTANCE_ID=notaninstanceid -e GOOGLE_APPLICATION_CREDENTIALS=/root/.gcpcreds/VoyageProject-d33af8724280.json
+CACHEBUST:=$(shell date +%s)
 
 build:
-	docker build  --network=host -t $(TAG) .
+	docker build  --network=host --build-arg CACHEBUST=$(CACHEBUST) -t $(TAG) .
 
 push:
 	echo Pusing docker container. Note that workers will not use the latest docker container unless they are restarted.

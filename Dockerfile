@@ -12,6 +12,8 @@ RUN git config --global user.name "Problem Worker"
 # These files will be shadowed by local files due to pwd mount (see Makefile)
 COPY . .
 
+ARG CACHEBUST=1
+
 # Make sure we have up to date github backed libs
 RUN pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/botleague/botleague-helpers#egg=botleague-helpers
 RUN pip install --upgrade --force-reinstall --ignore-installed --no-cache-dir git+git://github.com/deepdrive/problem-constants#egg=problem-constants
