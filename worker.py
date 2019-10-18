@@ -8,6 +8,7 @@ from typing import Optional
 import re
 
 from botleague_helpers.crypto import decrypt_symmetric, decrypt_db_key
+from botleague_helpers import docker_cleanup
 from botleague_helpers.db import get_db
 from botleague_helpers.utils import box2json
 from datetime import datetime
@@ -80,9 +81,7 @@ class Worker:
         iters = 0
         log.info('Worker started, checking for jobs ...')
         while True:
-            # TODO: While disk low, prune images back 1 day at a time with
-            #  docker container prune --force --filter "until=24h"
-            #  Send alert to deepdrive-alerts when this happens
+            docker_cleanup.remove_old()
 
             # TODO: Pull in containers that we'll likely need
 
