@@ -77,6 +77,7 @@ class Worker:
         add_stackdriver_sink(log, f'{STACKDRIVER_LOG_NAME}-inst-{self.instance_id}')
         self.docker_creds = None
 
+    @log.catch(reraise=True)
     def loop(self, max_iters=None):
         iters = 0
         log.info('Worker started, checking for jobs ...')
@@ -628,6 +629,7 @@ class Worker:
                 container.stop()
 
 
+@log.catch(reraise=True)
 def main():
     worker = Worker()
     worker.loop()
