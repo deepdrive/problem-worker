@@ -455,8 +455,8 @@ class Worker:
             try:
                 log.info(f'Sending results for job \n'
                          f'{box2json(job)}')
-                results_resp = requests.post(
-                    f'{job.botleague_liaison_host}/results',
+                results_resp = post_results_with_retries(
+                    url=f'{job.botleague_liaison_host}/results',
                     json=dict(eval_key=job.eval_spec.eval_key,
                               results=job.results))
                 if not results_resp.ok:
@@ -629,6 +629,25 @@ class Worker:
                 container.stop()
 
 
+def post_results_with_retries(max_attempts=5, **kwargs):
+    done = False
+    valid_results_codes = [200, 400, 500]
+    attempts = 0
+    resp = None
+    while not done:
+        resp = requests.post(**kwargs)
+        if resp.status_code in valid_results_codes:
+            done = True
+        elif attempts < max_attempts:
+            log.error(f'Failed posting results, response {resp}, retrying')
+            time.sleep(1)
+        else:
+            done = True
+        attempts += 1
+
+    return resp
+
+
 @log.catch(reraise=True)
 def main():
     worker = Worker()
@@ -636,11 +655,12 @@ def main():
 
 
 def play():
-    sink = StringIO()
-    sink_ref = log.add(sink)
-    log.info('asdf')
-    log.remove(sink_ref)
-    print(sink.getvalue())
+    # sink = StringIO()
+    # sink_ref = log.add(sink)
+    # log.info('asdf')
+    # log.remove(sink_ref)
+    # print(sink.getvalue())
+    print(post_results_with_retries(url='http://127.0.0.1:5000/'))
     pass
     # encrypt_db_key(get_db('secrets'), 'DEEPDRIVE_DOCKER_CREDS')
 
