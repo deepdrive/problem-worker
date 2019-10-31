@@ -82,7 +82,7 @@ class Worker:
         iters = 0
         log.info('Worker started, checking for jobs ...')
         while True:
-            docker_cleanup.remove_old()
+            docker_cleanup.prune()
 
             # TODO: Pull in containers that we'll likely need
 
