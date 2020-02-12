@@ -3,6 +3,7 @@ import os
 import sys
 
 from io import StringIO
+from retry import retry
 from typing import Optional
 
 import re
@@ -448,6 +449,7 @@ class Worker:
         return results_mount
 
     @staticmethod
+    @retry(tries=5, jitter=(0, 1), logger=log)
     def send_results(job):
         if in_test():
             return
@@ -455,6 +457,7 @@ class Worker:
             try:
                 log.info(f'Sending results for job \n'
                          f'{box2json(job)}')
+                # Nested custom retry to deal with 409's
                 results_resp = post_results_with_retries(
                     url=f'{job.botleague_liaison_host}/results',
                     json=dict(eval_key=job.eval_spec.eval_key,
@@ -470,7 +473,7 @@ class Worker:
             except Exception:
                 # TODO: Create an alert on this log message
                 log.exception('Possible problem sending results back to '
-                              'problem endpoint.')
+                              'liaison.')
 
     @staticmethod
     def get_results(results_dir) -> dict:
