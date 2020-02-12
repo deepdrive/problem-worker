@@ -584,14 +584,37 @@ class Worker:
 
     def start_container(self, docker_tag, cmd=None, env=None, volumes=None,
                         name=None):
-        container = self.docker.containers.run(docker_tag,
-                                               command=cmd,
-                                               detach=True,
-                                               stdout=False,
-                                               stderr=False,
-                                               environment=env,
-                                               volumes=volumes,
-                                               **CONTAINER_RUN_OPTIONS)
+        def start(**options):
+            return self.docker.containers.run(docker_tag,
+                                                   command=cmd,
+                                                   detach=True,
+                                                   stdout=False,
+                                                   stderr=False,
+                                                   environment=env,
+                                                   volumes=volumes,
+                                                   **options)
+        try:
+            container = start(**CONTAINER_RUN_OPTIONS)
+        except Exception as e:
+            if '"nvidia-container-runtime": executable file not found' in str(e):
+                # TODO: Remove patch when
+                #  https://github.com/docker/docker-py/pull/2471 is merged
+                from docker_gpu_patch import DeviceRequest
+                log.warning('nvidia docker runtime not found, trying gpus=all')
+
+                self.docker = docker.from_env(version='1.40')
+
+                # Danger! Mutating global - okay for now as single threaded and
+                # fallback is to just change again after exception
+                del CONTAINER_RUN_OPTIONS['runtime']
+
+                CONTAINER_RUN_OPTIONS['device_requests'] = [
+                    DeviceRequest(count=-1, capabilities=[['gpu']])
+                ]
+
+                container = start(**CONTAINER_RUN_OPTIONS)
+            else:
+                raise e
         return container
 
     @staticmethod
