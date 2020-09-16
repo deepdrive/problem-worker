@@ -24,12 +24,11 @@ Start the NVIDIA GCP instance described [here](https://github.com/deepdrive/prob
 mkdir ~/.gcpcreds
 
 # On local machine
-gcloud compute scp ~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json <your-problem-worker>:~/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json
-silken-impulse-217423-8fbe5bbb2a10.json
+gcloud compute scp ~/.gcpcreds/your-creds.json <your-problem-worker>:~/.gcpcreds/your-creds.json
 
 # On server
 sudo mkdir /root/.gcpcreds
-sudo cp /home/craig_voyage_auto/.gcpcreds/silken-impulse-217423-8fbe5bbb2a10.json /root/.gcpcreds/
+sudo cp /home/your-user-dir/.gcpcreds/your-creds.json /root/.gcpcreds/
 
 # Clone repo
 cd /usr/local/src
